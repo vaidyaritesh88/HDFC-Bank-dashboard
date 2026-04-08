@@ -1,0 +1,7 @@
+*.xlsm
+*.xlsx
+*.zip
+scenario_*.json
+rebuild.py
+dashboard_data.json
+.claude/
