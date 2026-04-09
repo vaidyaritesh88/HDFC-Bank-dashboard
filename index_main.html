@@ -828,7 +828,7 @@ function renderHdfcLtd() {
   const H = DATA.hdfcltd || {};
   const abs = H.absolute || {}, yoy = H.yoy || {}, mets = H.metrics || {};
   const labels = H.periods || [];
-  const filtered = labels.filter(q => parseInt(q.slice(2)) >= 10);
+  const filtered = labels; // HDFC Ltd data is 1QFY18 to 4QFY23 (24 quarters)
 
   const bsRows = [
     {label:'Loans on BS', data:abs.LoansOnBS||{}, fmtAbs:true, cls:'row-subtotal'},
@@ -870,10 +870,7 @@ function renderMerger() {
   const combined = M.combined || {};
   const cYoY = M.combined_yoy || {};
   const cMets = M.combined_metrics || {};
-  const labels = (M.combined_periods || []).filter(q => {
-    const y = parseInt(q.slice(2));
-    return y >= 10 && y <= 26;
-  });
+  const labels = M.combined_periods || []; // 1Q18 to 3Q26
 
   const mergerCut = ['2Q24'];
 
@@ -937,10 +934,10 @@ function renderMerger() {
     {label:'Equity', key:'Equity'}, {label:'NII', key:'NII'},
     {label:'PPOP', key:'PPOP'}, {label:'PAT', key:'PAT'},
   ];
-  const cagrHeadersM = [{label:'Last 10yr (4QFY13\u21924QFY23)'}, {label:'Last 5yr (4QFY18\u21924QFY23)'}];
+  const cagrHeadersM = [{label:'5yr CAGR (1QFY18\u21921QFY23)'}, {label:'Implied 5yr (4QFY18\u21924QFY23)'}];
   const cagrRowsM = cagrItemsM.map(item => {
     const d = combined[item.key] || {};
-    return {label: item.label, values: [cagrQ(d, '4Q13', '4Q23'), cagrQ(d, '4Q18', '4Q23')]};
+    return {label: item.label, values: [cagrQ(d, '1Q18', '1Q23'), cagrQ(d, '4Q18', '4Q23')]};
   });
   buildCagrTable('tbl-merger-cagr', cagrHeadersM, cagrRowsM);
 }
