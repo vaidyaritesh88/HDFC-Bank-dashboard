@@ -235,6 +235,17 @@ combined = {
     'PBT': combine(bank_extra['PBT'], ltd_final['PBT']),
 }
 
+# FILL 1QFY24 GAP for Loans, TotalAssets, Equity
+# Use 4Q23 QoQ growth (= (4Q23 - 3Q23)/3Q23) applied forward to estimate 1Q24
+for bs_key in ['Loans', 'TotalAssets', 'Equity']:
+    v_3q23 = combined[bs_key].get('3Q23')
+    v_4q23 = combined[bs_key].get('4Q23')
+    if v_3q23 and v_4q23 and v_3q23 > 0:
+        qoq_growth = (v_4q23 - v_3q23) / v_3q23
+        combined[bs_key]['1Q24'] = round(v_4q23 * (1 + qoq_growth), 4)
+        print(f'  1Q24 {bs_key} estimate: {combined[bs_key]["1Q24"]:,.0f} '
+              f'(4Q23 {v_4q23:,.0f} * (1 + {qoq_growth*100:.2f}%))')
+
 # Get sorted combined periods
 all_combined_periods = set()
 for k, d in combined.items():

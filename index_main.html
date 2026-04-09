@@ -253,9 +253,9 @@ body { font-family: 'Segoe UI', -apple-system, sans-serif; background:var(--bg);
       <div class="card" style="padding:20px;line-height:1.7;">
         <h3 style="margin-bottom:8px;font-size:14px;color:var(--accent);">Data Sources</h3>
         <ul style="margin-left:20px;font-size:12px;">
-          <li><b>HDFC Bank (historical + forecast)</b>: Company filings (quarterly and annual reports), aggregated into an internal Jan Chor Partners financial model.</li>
-          <li><b>HDFC Ltd (pre-merger)</b>: Company filings, aggregated via the Kotak Institutional Equities (KIE) quarterly results model dated Sep 2023.</li>
-          <li><b>Forecast periods (FY26-FY28)</b>: Base case assumptions from internal HDFC Bank model.</li>
+          <li><b>HDFC Bank (historical)</b>: Company filings.</li>
+          <li><b>HDFC Ltd (pre-merger)</b>: Company filings.</li>
+          <li><b>Forecast periods (FY26-FY28)</b>: Own estimates.</li>
         </ul>
 
         <h3 style="margin:16px 0 8px 0;font-size:14px;color:var(--accent);">Merger Highlighting</h3>
@@ -269,21 +269,6 @@ body { font-family: 'Segoe UI', -apple-system, sans-serif; background:var(--bg);
           <li><b>Data tab</b>: Same quarterly highlighting as above.</li>
           <li><b>Loan Segments tab</b>: F2Q24 through F1Q25 highlighted in quarterly loan mix tables.</li>
         </ul>
-
-        <h3 style="margin:16px 0 8px 0;font-size:14px;color:var(--accent);">Data Adjustments & Corrections</h3>
-        <ul style="margin-left:20px;font-size:12px;">
-          <li><b>Quarterly Net Advances (4QFY15-4QFY16)</b>: Source data had retail-only figures in the total advances field. Corrected to proper totals (3,654,950 / 3,820,104 / 4,185,410 / 4,363,644 / 4,645,940 Rs mn) using annual BS row 11.</li>
-          <li><b>SA for 3QFY19</b>: Source had 23,517 (100x error). Corrected to 2,351,700 Rs mn.</li>
-          <li><b>CASA for 3QFY23</b>: Source CASA sum (6,118,010) did not match SA+CA (7,629,510). Corrected to proper sum.</li>
-          <li><b>Loan growth (FY10-FY11)</b>: Recomputed using BS row 11 (Net Loans to Customers) instead of row 9 (Gross Customer Loans) which had IBPC/BRDS reclassification distortions.</li>
-          <li><b>EPS / BVPS</b>: Computed using the latest shares outstanding (15,304.4 mn) for the entire historical series, so CAGR calculations are consistent across the 2019 stock split.</li>
-          <li><b>Yield / CoF / NIM (quarterly)</b>: Recomputed from raw interest income, interest expense, and NII using Avg IEA/IBL as denominator (annualized ×4).</li>
-        </ul>
-
-        <h3 style="margin:16px 0 8px 0;font-size:14px;color:var(--accent);">Scenario Forecasts</h3>
-        <p style="font-size:12px;">
-          Three scenarios (Base / Upside / Downside) are extracted from the internal HDFC Bank model by toggling Grid!S2 (scenario selector) and re-extracting. The Annual and Data tabs allow live switching between scenarios. Base case is the default.
-        </p>
 
         <h3 style="margin:16px 0 8px 0;font-size:14px;color:var(--accent);">Definitions</h3>
         <ul style="margin-left:20px;font-size:12px;">
