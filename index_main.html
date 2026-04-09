@@ -113,7 +113,10 @@ body { font-family: 'Segoe UI', -apple-system, sans-serif; background:var(--bg);
       <button class="tab" onclick="switchView('annual',event)">Annual</button>
       <button class="tab active" onclick="switchView('quarterly',event)">Quarterly</button>
       <button class="tab" onclick="switchView('segments',event)">Loan Segments</button>
-
+      <button class="tab" onclick="switchView('data',event)">Data</button>
+      <button class="tab" onclick="switchView('hdfcltd',event)">HDFC Ltd</button>
+      <button class="tab" onclick="switchView('merger',event)">Merger Sim</button>
+      <button class="tab" onclick="switchView('notes',event)">Notes</button>
     </div>
   </div>
 </div>
@@ -184,6 +187,116 @@ body { font-family: 'Segoe UI', -apple-system, sans-serif; background:var(--bg);
     <div class="section"><div class="section-title">4. Retail Loan Sub-Segment Composition (% of Total Retail)</div>
       <div class="card"><div class="dupont-table-wrap" id="tbl-retail-comp"></div></div>
       <div class="card" style="margin-top:12px"><div class="chart-container" style="height:350px"><canvas id="ch-retail-comp"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- ============ DATA VIEW ============ -->
+  <div id="view-data" class="view-panel">
+    <div class="section"><div class="section-title">Annual Key Data (INR Mn) | CAGR base: FY25</div>
+      <div style="display:flex;gap:16px;align-items:flex-start;">
+        <div class="card" style="flex:1;min-width:0;"><div class="dupont-table-wrap" id="tbl-data-annual"></div></div>
+        <div class="card" style="flex:0 0 auto;min-width:220px;"><div class="card-title">CAGR Summary (Base: FY25)</div><div class="dupont-table-wrap" id="tbl-cagr-summary"></div></div>
+      </div>
+      <div class="section-note">EPS & BVPS computed using latest share count (15,304.4 mn shares) for consistent CAGR. Forecast capped at FY28.</div>
+    </div>
+    <div class="section"><div class="section-title">Quarterly Key Data (INR Mn)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-data-quarterly"></div></div>
+    </div>
+  </div>
+
+  <!-- ============ HDFC LTD VIEW ============ -->
+  <div id="view-hdfcltd" class="view-panel">
+    <div class="section"><div class="section-title">HDFC Ltd - Quarterly Standalone Data</div>
+      <div class="section-note">Historical pre-merger data for HDFC Ltd (NBFC). Merged with HDFC Bank in July 2023 (2QFY24).</div>
+    </div>
+    <div class="section"><div class="section-title">1. Balance Sheet (INR Mn) & YoY Growth</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-hdfcltd-bs"></div></div>
+    </div>
+    <div class="section"><div class="section-title">2. P&L (INR Mn)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-hdfcltd-pl"></div></div>
+    </div>
+    <div class="section"><div class="section-title">3. Key Ratios</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-hdfcltd-ratios"></div></div>
+    </div>
+  </div>
+
+  <!-- ============ MERGER SIMULATION VIEW ============ -->
+  <div id="view-merger" class="view-panel">
+    <div class="section">
+      <div class="card" style="padding:14px;background:#fff7ed;border-color:#fb923c;">
+        <div style="font-weight:700;color:#9a3412;margin-bottom:4px;">Merger Simulation</div>
+        <div style="font-size:11px;color:#7c2d12;line-height:1.5;">
+          This tab simulates what a combined HDFC Bank + HDFC Ltd entity would have looked like <b>before the actual merger</b> (completed July 2023 / 2QFY24).
+          Pre-merger quarters (up to 1QFY24) show the simple sum of both entities. Post-merger quarters (2QFY24 onwards) reflect the actual merged HDFC Bank standalone data.
+          This creates a continuous series for meaningful YoY growth and CAGR analysis. HDFC Ltd sources: company filings and the KIE quarterly results model.
+        </div>
+      </div>
+    </div>
+    <div class="section"><div class="section-title">1. Combined Loans, Total Assets, Equity (INR Mn)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-merger-bs"></div></div>
+      <div class="card" style="margin-top:12px"><div class="card-title">YoY Growth</div><div class="chart-container"><canvas id="ch-merger-bs"></canvas></div></div>
+    </div>
+    <div class="section"><div class="section-title">2. Combined P&L (INR Mn)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-merger-pl"></div></div>
+    </div>
+    <div class="section"><div class="section-title">3. Combined DuPont & Key Ratios</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-merger-dupont"></div></div>
+    </div>
+    <div class="section"><div class="section-title">4. CAGR Summary (Base: FY23)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-merger-cagr"></div></div>
+    </div>
+  </div>
+
+  <!-- ============ NOTES & SOURCES VIEW ============ -->
+  <div id="view-notes" class="view-panel">
+    <div class="section"><div class="section-title">Notes & Sources</div>
+      <div class="card" style="padding:20px;line-height:1.7;">
+        <h3 style="margin-bottom:8px;font-size:14px;color:var(--accent);">Data Sources</h3>
+        <ul style="margin-left:20px;font-size:12px;">
+          <li><b>HDFC Bank (historical + forecast)</b>: Company filings (quarterly and annual reports), aggregated into an internal Jan Chor Partners financial model.</li>
+          <li><b>HDFC Ltd (pre-merger)</b>: Company filings, aggregated via the Kotak Institutional Equities (KIE) quarterly results model dated Sep 2023.</li>
+          <li><b>Forecast periods (FY26-FY28)</b>: Base case assumptions from internal HDFC Bank model.</li>
+        </ul>
+
+        <h3 style="margin:16px 0 8px 0;font-size:14px;color:var(--accent);">Merger Highlighting</h3>
+        <p style="font-size:12px;">
+          Columns highlighted with an <span style="background:#fff7ed;color:#c2410c;padding:2px 6px;border-radius:3px;font-weight:600;">orange tint</span> indicate periods impacted by the HDFC Ltd merger (completed July 2023 / 2QFY24):
+        </p>
+        <ul style="margin-left:20px;font-size:12px;">
+          <li><b>Annual tab</b>: FY24 is highlighted in all tables (first full year with merger impact).</li>
+          <li><b>Quarterly tab, DuPont & Key Ratios</b>: 2QFY24 highlighted (merger effective quarter).</li>
+          <li><b>Quarterly tab, Growth & CASA</b>: 2QFY24 through 1QFY25 highlighted (4 quarters of YoY distortion).</li>
+          <li><b>Data tab</b>: Same quarterly highlighting as above.</li>
+          <li><b>Loan Segments tab</b>: F2Q24 through F1Q25 highlighted in quarterly loan mix tables.</li>
+        </ul>
+
+        <h3 style="margin:16px 0 8px 0;font-size:14px;color:var(--accent);">Data Adjustments & Corrections</h3>
+        <ul style="margin-left:20px;font-size:12px;">
+          <li><b>Quarterly Net Advances (4QFY15-4QFY16)</b>: Source data had retail-only figures in the total advances field. Corrected to proper totals (3,654,950 / 3,820,104 / 4,185,410 / 4,363,644 / 4,645,940 Rs mn) using annual BS row 11.</li>
+          <li><b>SA for 3QFY19</b>: Source had 23,517 (100x error). Corrected to 2,351,700 Rs mn.</li>
+          <li><b>CASA for 3QFY23</b>: Source CASA sum (6,118,010) did not match SA+CA (7,629,510). Corrected to proper sum.</li>
+          <li><b>Loan growth (FY10-FY11)</b>: Recomputed using BS row 11 (Net Loans to Customers) instead of row 9 (Gross Customer Loans) which had IBPC/BRDS reclassification distortions.</li>
+          <li><b>EPS / BVPS</b>: Computed using the latest shares outstanding (15,304.4 mn) for the entire historical series, so CAGR calculations are consistent across the 2019 stock split.</li>
+          <li><b>Yield / CoF / NIM (quarterly)</b>: Recomputed from raw interest income, interest expense, and NII using Avg IEA/IBL as denominator (annualized ×4).</li>
+        </ul>
+
+        <h3 style="margin:16px 0 8px 0;font-size:14px;color:var(--accent);">Scenario Forecasts</h3>
+        <p style="font-size:12px;">
+          Three scenarios (Base / Upside / Downside) are extracted from the internal HDFC Bank model by toggling Grid!S2 (scenario selector) and re-extracting. The Annual and Data tabs allow live switching between scenarios. Base case is the default.
+        </p>
+
+        <h3 style="margin:16px 0 8px 0;font-size:14px;color:var(--accent);">Definitions</h3>
+        <ul style="margin-left:20px;font-size:12px;">
+          <li><b>Yield on Funds</b> = Interest Income / Avg Interest Earning Assets</li>
+          <li><b>Cost of Funds</b> = Interest Expense / Avg Interest Bearing Liabilities</li>
+          <li><b>NIM</b> = Net Interest Income / Avg Interest Earning Assets</li>
+          <li><b>LDR</b> = Net Advances / Total Deposits</li>
+          <li><b>CASA Ratio</b> = (Current Account + Savings Account) / Total Deposits</li>
+          <li><b>Total AUM (Loan Mix)</b> = Retail + CRB + Corporate & Other Wholesale</li>
+          <li><b>Gross Advances</b> = Total AUM + eHDFCL Non-Individual − IBPC/BRDS/Securitisation</li>
+          <li><b>Net Advances (BS)</b> = Gross Advances − Specific Provisions</li>
+        </ul>
+      </div>
     </div>
   </div>
 
@@ -289,6 +402,9 @@ function switchView(v,e) {
   window.scrollTo(0,0);
   if(v==='quarterly'&&!CI['ch-loangr-q']) renderQ();
   if(v==='segments'&&!CI['ch-loanmix-stack']) renderSeg();
+  if(v==='data'&&!document.querySelector('#tbl-data-annual table')) renderData();
+  if(v==='hdfcltd'&&!document.querySelector('#tbl-hdfcltd-bs table')) renderHdfcLtd();
+  if(v==='merger'&&!document.querySelector('#tbl-merger-bs table')) renderMerger();
 }
 
 // ============ ANNUAL ============
@@ -592,6 +708,241 @@ function onScenarioChange(val) {
     const el = document.getElementById(id);
     if (el) { el.value = sel; el.style.borderColor = clr; }
   });
+}
+
+// Helper: build a simple CAGR summary table via DOM
+function buildCagrTable(containerId, headers, rows) {
+  const container = document.getElementById(containerId);
+  container.textContent = '';
+  const table = document.createElement('table');
+  table.className = 'dupont-table';
+  const thead = document.createElement('thead');
+  const hr = document.createElement('tr');
+  const emptyTh = document.createElement('th');
+  hr.appendChild(emptyTh);
+  headers.forEach(h => {
+    const th = document.createElement('th');
+    th.textContent = h.label;
+    if (h.cls) th.className = h.cls;
+    hr.appendChild(th);
+  });
+  thead.appendChild(hr);
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    const td0 = document.createElement('td');
+    td0.textContent = r.label;
+    tr.appendChild(td0);
+    r.values.forEach((v, i) => {
+      const td = document.createElement('td');
+      td.textContent = v != null ? (v * 100).toFixed(1) + '%' : '-';
+      if (headers[i] && headers[i].cls) td.className = headers[i].cls;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  container.appendChild(table);
+}
+
+// ============ DATA TAB ============
+function computeYoY(data, labels) {
+  const result = {};
+  for (let i = 1; i < labels.length; i++) {
+    const curr = data[labels[i]], prev = data[labels[i-1]];
+    if (curr != null && prev != null && prev !== 0) result[labels[i]] = (curr - prev) / prev;
+  }
+  return result;
+}
+
+function renderData() {
+  const AA = DATA.annual.absolute || {};
+  const QA = DATA.quarterly.absolute || {};
+  const aLabels = Object.keys(AA.NetAdvances || AA.Deposits || {});
+  const qLabels = Object.keys(QA.NetAdvances || QA.Deposits || {});
+
+  const aRows = [];
+  const absItems = [
+    {label:'Net Advances', key:'NetAdvances', cls:'row-subtotal'},
+    {label:'Total Deposits', key:'Deposits', cls:'row-subtotal'},
+    {label:'  CA (Demand)', key:'Demand'},
+    {label:'  SA (Savings)', key:'Savings'},
+    {label:'  CASA', key:'CASA'},
+    {label:'  Term Deposits', key:'Term', cls:'row-separator'},
+    {label:'Total Assets', key:'TotalAssets', cls:'row-subtotal'},
+    {label:'Borrowings', key:'Borrowings'},
+    {label:'Equity', key:'Equity', cls:'row-separator'},
+  ];
+  absItems.forEach(r => aRows.push({label:r.label, data:AA[r.key]||{}, fmtAbs:true, cls:r.cls||''}));
+
+  aRows.push({label:'PAT', data:AA.PAT||{}, fmtAbs:true, cls:'row-subtotal'});
+  aRows.push({label:'  PAT Growth YoY', data:computeYoY(AA.PAT||{}, aLabels), dec:1, cls:'row-separator'});
+  aRows.push({label:'EPS (INR)', data:AA.EPS||{}, fmtNum:true, cls:'row-subtotal'});
+  aRows.push({label:'  EPS Growth YoY', data:computeYoY(AA.EPS||{}, aLabels), dec:1, cls:'row-separator'});
+  aRows.push({label:'BVPS (INR)', data:AA.BVPS||{}, fmtNum:true, cls:'row-subtotal'});
+  aRows.push({label:'  BVPS Growth YoY', data:computeYoY(AA.BVPS||{}, aLabels), dec:1});
+
+  buildTable('tbl-data-annual', aRows, aLabels, ACT_A, MRG_A);
+
+  // CAGR Summary — Base FY25, Last 10yr / Last 5yr / Next 3yr
+  function cagrCalc(d, from, to) {
+    const v1=d[from], v2=d[to];
+    if (!v1||!v2||v1<=0||v2<=0) return null;
+    const y1=parseInt(from.replace('FY','')), y2=parseInt(to.replace('FY',''));
+    if (y2<=y1) return null;
+    return Math.pow(v2/v1, 1/(y2-y1)) - 1;
+  }
+  const cagrItems = [
+    {label:'Net Advances', key:'NetAdvances'}, {label:'Deposits', key:'Deposits'},
+    {label:'CASA', key:'CASA'}, {label:'Total Assets', key:'TotalAssets'},
+    {label:'Equity', key:'Equity'}, {label:'PAT', key:'PAT'},
+    {label:'EPS', key:'EPS'}, {label:'BVPS', key:'BVPS'},
+  ];
+  const cagrHeaders = [{label:'Last 10yr'}, {label:'Last 5yr'}, {label:'Next 3yr', cls:'est'}];
+  const cagrRows = cagrItems.map(item => {
+    const d = AA[item.key] || {};
+    return {label: item.label, values: [cagrCalc(d,'FY15','FY25'), cagrCalc(d,'FY20','FY25'), cagrCalc(d,'FY25','FY28')]};
+  });
+  buildCagrTable('tbl-cagr-summary', cagrHeaders, cagrRows);
+
+  // Quarterly
+  const qRows = [];
+  [{label:'Net Advances',key:'NetAdvances',cls:'row-subtotal'},{label:'Total Deposits',key:'Deposits',cls:'row-subtotal'},
+   {label:'  CA',key:'CA'},{label:'  SA',key:'SA'},{label:'  CASA',key:'CASA'},{label:'  Term',key:'Term',cls:'row-separator'},
+   {label:'Total Assets',key:'TotalAssets',cls:'row-subtotal'},{label:'Borrowings',key:'Borrowings'},
+   {label:'Equity',key:'Equity',cls:'row-separator'},
+  ].forEach(r => qRows.push({label:r.label, data:QA[r.key]||{}, fmtAbs:true, cls:r.cls||''}));
+  qRows.push({label:'PAT', data:QA.PAT||{}, fmtAbs:true, cls:'row-subtotal'});
+  const patYoYQ = {};
+  for (let i = 4; i < qLabels.length; i++) {
+    const curr = (QA.PAT||{})[qLabels[i]], prev = (QA.PAT||{})[qLabels[i-4]];
+    if (curr!=null && prev!=null && prev!==0) patYoYQ[qLabels[i]] = (curr-prev)/prev;
+  }
+  qRows.push({label:'  PAT Growth YoY', data:patYoYQ, dec:1});
+  buildTable('tbl-data-quarterly', qRows, qLabels, ACT_Q, MRG_Q_GROWTH);
+}
+
+// ============ HDFC LTD TAB ============
+function renderHdfcLtd() {
+  const H = DATA.hdfcltd || {};
+  const abs = H.absolute || {}, yoy = H.yoy || {}, mets = H.metrics || {};
+  const labels = H.periods || [];
+  const filtered = labels.filter(q => parseInt(q.slice(2)) >= 10);
+
+  const bsRows = [
+    {label:'Loans on BS', data:abs.LoansOnBS||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'  Loan Growth YoY', data:yoy.LoansOnBS||{}, dec:1, cls:'row-separator'},
+    {label:'Total Assets', data:abs.TotalAssets||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'  Asset Growth YoY', data:yoy.TotalAssets||{}, dec:1, cls:'row-separator'},
+    {label:'Equity', data:abs.Equity||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'  Equity Growth YoY', data:yoy.Equity||{}, dec:1, cls:'row-separator'},
+    {label:'Total Borrowings', data:abs.TotalBorrowings||{}, fmtAbs:true},
+  ];
+  buildTable('tbl-hdfcltd-bs', bsRows, filtered, '4Q24');
+
+  const plRows = [
+    {label:'NII', data:abs.NII||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'Total Income', data:abs.TotalIncome||{}, fmtAbs:true},
+    {label:'Opex', data:abs.Opex||{}, fmtAbs:true},
+    {label:'PPOP', data:abs.PPOP||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'Provisions', data:abs.Provisions||{}, fmtAbs:true},
+    {label:'PBT', data:abs.PBT||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'PAT', data:abs.PAT||{}, fmtAbs:true, cls:'row-highlight'},
+    {label:'  PAT YoY', data:yoy.PAT||{}, dec:1},
+  ];
+  buildTable('tbl-hdfcltd-pl', plRows, filtered, '4Q24');
+
+  const ratRows = [
+    {label:'RoAA (annualized)', data:mets.RoAA||{}, dec:2, cls:'row-highlight'},
+    {label:'RoAE (annualized)', data:mets.RoAE||{}, dec:1, cls:'row-highlight row-separator'},
+    {label:'Leverage (x)', data:mets.Leverage||{}, fmtX:true},
+    {label:'NIM (annualized)', data:mets.NIM||{}, dec:2},
+    {label:'Cost/Income', data:mets.CostIncome||{}, dec:1},
+    {label:'Loan Growth YoY', data:mets.LoanGrowthYoY||{}, dec:1},
+  ];
+  buildTable('tbl-hdfcltd-ratios', ratRows, filtered, '4Q24');
+}
+
+// ============ MERGER SIMULATION TAB ============
+function renderMerger() {
+  const M = DATA.merger || {};
+  const combined = M.combined || {};
+  const cYoY = M.combined_yoy || {};
+  const cMets = M.combined_metrics || {};
+  const labels = (M.combined_periods || []).filter(q => {
+    const y = parseInt(q.slice(2));
+    return y >= 10 && y <= 26;
+  });
+
+  const mergerCut = ['2Q24'];
+
+  const bsRows = [
+    {label:'Loans (Bank + Ltd)', data:combined.Loans||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'  Loan Growth YoY', data:cYoY.Loans||{}, dec:1, cls:'row-separator'},
+    {label:'Total Assets', data:combined.TotalAssets||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'  Asset Growth YoY', data:cYoY.TotalAssets||{}, dec:1, cls:'row-separator'},
+    {label:'Equity', data:combined.Equity||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'  Equity Growth YoY', data:cYoY.Equity||{}, dec:1},
+  ];
+  buildTable('tbl-merger-bs', bsRows, labels, '4Q26', mergerCut);
+
+  const gvObj = (d,L) => L.map(l => d[l]!=null ? d[l]*100 : null);
+  mkChart('ch-merger-bs', labels, [
+    {label:'Loans YoY', type:'line', data:gvObj(cYoY.Loans||{}, labels), borderColor:C.blue, borderWidth:2},
+    {label:'Assets YoY', type:'line', data:gvObj(cYoY.TotalAssets||{}, labels), borderColor:C.teal, borderWidth:2},
+    {label:'Equity YoY', type:'line', data:gvObj(cYoY.Equity||{}, labels), borderColor:C.orange, borderWidth:2},
+  ]);
+
+  const plRows = [
+    {label:'NII', data:combined.NII||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'Total Income', data:combined.TotalIncome||{}, fmtAbs:true},
+    {label:'Opex', data:combined.Opex||{}, fmtAbs:true},
+    {label:'PPOP', data:combined.PPOP||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'Provisions', data:combined.Provisions||{}, fmtAbs:true},
+    {label:'PBT', data:combined.PBT||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'PAT', data:combined.PAT||{}, fmtAbs:true, cls:'row-highlight'},
+    {label:'  PAT YoY', data:cYoY.PAT||{}, dec:1},
+    {label:'  NII YoY', data:cYoY.NII||{}, dec:1},
+    {label:'  PPOP YoY', data:cYoY.PPOP||{}, dec:1},
+  ];
+  buildTable('tbl-merger-pl', plRows, labels, '4Q26', mergerCut);
+
+  const dRows = [
+    {label:'RoAA (annualized)', data:cMets.RoAA||{}, dec:2, cls:'row-highlight'},
+    {label:'Leverage (x)', data:cMets.Leverage||{}, fmtX:true},
+    {label:'RoAE (annualized)', data:cMets.RoAE||{}, dec:1, cls:'row-highlight row-separator'},
+    {label:'NIM (annualized)', data:cMets.NIM||{}, dec:2},
+    {label:'Cost/Income', data:cMets.CostIncome||{}, dec:1},
+    {label:'Credit Cost', data:cMets.CreditCost||{}, dec:2},
+  ];
+  buildTable('tbl-merger-dupont', dRows, labels, '4Q26', mergerCut);
+
+  // CAGR - Base FY23
+  function cagrQ(d, from, to) {
+    const v1 = d[from], v2 = d[to];
+    if (!v1 || !v2 || v1 <= 0 || v2 <= 0) return null;
+    const allKeys = Object.keys(d).sort((a,b) => {
+      const ay = parseInt(a.slice(2)), aq = parseInt(a[0]);
+      const by = parseInt(b.slice(2)), bq = parseInt(b[0]);
+      return ay !== by ? ay - by : aq - bq;
+    });
+    const i1 = allKeys.indexOf(from), i2 = allKeys.indexOf(to);
+    if (i1 < 0 || i2 < 0 || i2 <= i1) return null;
+    const years = (i2 - i1) / 4;
+    return Math.pow(v2/v1, 1/years) - 1;
+  }
+  const cagrItemsM = [
+    {label:'Loans', key:'Loans'}, {label:'Total Assets', key:'TotalAssets'},
+    {label:'Equity', key:'Equity'}, {label:'NII', key:'NII'},
+    {label:'PPOP', key:'PPOP'}, {label:'PAT', key:'PAT'},
+  ];
+  const cagrHeadersM = [{label:'Last 10yr (4QFY13\u21924QFY23)'}, {label:'Last 5yr (4QFY18\u21924QFY23)'}];
+  const cagrRowsM = cagrItemsM.map(item => {
+    const d = combined[item.key] || {};
+    return {label: item.label, values: [cagrQ(d, '4Q13', '4Q23'), cagrQ(d, '4Q18', '4Q23')]};
+  });
+  buildCagrTable('tbl-merger-cagr', cagrHeadersM, cagrRowsM);
 }
 
 // Init
