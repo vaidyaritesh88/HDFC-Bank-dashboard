@@ -192,15 +192,82 @@ body { font-family: 'Segoe UI', -apple-system, sans-serif; background:var(--bg);
 
   <!-- ============ DATA VIEW ============ -->
   <div id="view-data" class="view-panel">
-    <div class="section"><div class="section-title">Annual Key Data (INR Mn) | CAGR base: FY25</div>
+    <div class="section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="section-title" style="margin-bottom:0">Scenario</div>
+        <select id="scenario-select" onchange="onScenarioChange(this.value)" style="padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--card);color:var(--accent);font-weight:600;cursor:pointer;">
+          <option value="base" selected>Base</option>
+          <option value="upside">Upside</option>
+          <option value="downside">Downside</option>
+        </select>
+      </div>
+    </div>
+    <div class="section"><div class="section-title">Annual P&L (INR Mn)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-pl-annual"></div></div>
+    </div>
+    <div class="section"><div class="section-title">Annual Balance Sheet (INR Mn)</div>
       <div style="display:flex;gap:16px;align-items:flex-start;">
-        <div class="card" style="flex:1;min-width:0;"><div class="dupont-table-wrap" id="tbl-data-annual"></div></div>
+        <div class="card" style="flex:1;min-width:0;"><div class="dupont-table-wrap" id="tbl-bs-annual"></div></div>
         <div class="card" style="flex:0 0 auto;min-width:220px;"><div class="card-title">CAGR Summary (Base: FY25)</div><div class="dupont-table-wrap" id="tbl-cagr-summary"></div></div>
       </div>
-      <div class="section-note">EPS & BVPS computed using latest share count (15,304.4 mn shares) for consistent CAGR. Forecast capped at FY28.</div>
     </div>
-    <div class="section"><div class="section-title">Quarterly Key Data (INR Mn)</div>
-      <div class="card"><div class="dupont-table-wrap" id="tbl-data-quarterly"></div></div>
+    <div class="section"><div class="section-title">Quarterly P&L (INR Mn)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-pl-quarterly"></div></div>
+    </div>
+    <div class="section"><div class="section-title">Quarterly Balance Sheet (INR Mn)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-bs-quarterly"></div></div>
+    </div>
+    <div class="section"><div class="section-title">CAGR Calculator</div>
+      <div class="card" style="padding:16px;">
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;">
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Source</label>
+            <select id="cagr-source" onchange="updateCAGRPeriods()" style="padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;">
+              <option value="annual">Annual</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="manual">Manual Input</option>
+            </select>
+          </div>
+          <div id="cagr-metric-wrap">
+            <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Metric</label>
+            <select id="cagr-metric" style="padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;min-width:140px;">
+              <option value="NetAdvances">Net Advances</option>
+              <option value="Deposits">Deposits</option>
+              <option value="CASA">CASA</option>
+              <option value="SA">Savings</option>
+              <option value="Demand">CA / Demand</option>
+              <option value="Term">Term Deposits</option>
+              <option value="TotalAssets">Total Assets</option>
+              <option value="Equity">Equity</option>
+              <option value="PAT">PAT</option>
+              <option value="EPS">EPS</option>
+              <option value="BVPS">BVPS</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">From</label>
+            <select id="cagr-from" style="padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;"></select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">To</label>
+            <select id="cagr-to" style="padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;"></select>
+          </div>
+          <button onclick="calcCAGR()" style="padding:5px 14px;background:var(--accent);color:white;border:none;border-radius:5px;font-size:12px;cursor:pointer;font-weight:600;">Calculate</button>
+          <div id="cagr-result" style="font-size:15px;font-weight:700;color:var(--accent);min-width:80px;"></div>
+        </div>
+        <div id="cagr-manual" style="display:none;margin-top:8px;">
+          <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+            <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Start Value</label>
+              <input id="cagr-v1" type="number" style="padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;width:120px;"></div>
+            <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">End Value</label>
+              <input id="cagr-v2" type="number" style="padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;width:120px;"></div>
+            <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Years</label>
+              <input id="cagr-yrs" type="number" style="padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;width:70px;" value="5"></div>
+            <button onclick="calcCAGRManual()" style="padding:5px 14px;background:var(--accent);color:white;border:none;border-radius:5px;font-size:12px;cursor:pointer;font-weight:600;">Calculate</button>
+            <div id="cagr-result-manual" style="font-size:15px;font-weight:700;color:var(--accent);"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -387,7 +454,7 @@ function switchView(v,e) {
   window.scrollTo(0,0);
   if(v==='quarterly'&&!CI['ch-loangr-q']) renderQ();
   if(v==='segments'&&!CI['ch-loanmix-stack']) renderSeg();
-  if(v==='data'&&!document.querySelector('#tbl-data-annual table')) renderData();
+  if(v==='data'&&!document.querySelector('#tbl-pl-annual table')) renderData();
   if(v==='hdfcltd'&&!document.querySelector('#tbl-hdfcltd-bs table')) renderHdfcLtd();
   if(v==='merger'&&!document.querySelector('#tbl-merger-bs table')) renderMerger();
 }
@@ -684,9 +751,18 @@ function onScenarioChange(val) {
       }
     }
   }
+  // Swap P&L
+  for (const [key, fcastData] of Object.entries(sc.pl || {})) {
+    if (DATA.annual.pl && DATA.annual.pl[key]) {
+      for (const fy of fys) {
+        if (fcastData[fy] != null) DATA.annual.pl[key][fy] = fcastData[fy];
+      }
+    }
+  }
 
   // Re-render annual view and data tab
   renderA();
+  renderData();
     // Sync both dropdowns and color cue
   const clr = sel === 'upside' ? '#16a34a' : sel === 'downside' ? '#dc2626' : 'var(--border)';
   ['scenario-select','scenario-select-annual'].forEach(id => {
@@ -744,33 +820,50 @@ function computeYoY(data, labels) {
 function renderData() {
   const AA = DATA.annual.absolute || {};
   const QA = DATA.quarterly.absolute || {};
+  const PL = DATA.annual.pl || {};
+  const PLQ = DATA.quarterly.pl || {};
   const aLabels = Object.keys(AA.NetAdvances || AA.Deposits || {});
   const qLabels = Object.keys(QA.NetAdvances || QA.Deposits || {});
 
-  const aRows = [];
-  const absItems = [
-    {label:'Net Advances', key:'NetAdvances', cls:'row-subtotal'},
-    {label:'Total Deposits', key:'Deposits', cls:'row-subtotal'},
-    {label:'  CA (Demand)', key:'Demand'},
-    {label:'  SA (Savings)', key:'Savings'},
-    {label:'  CASA', key:'CASA'},
-    {label:'  Term Deposits', key:'Term', cls:'row-separator'},
-    {label:'Total Assets', key:'TotalAssets', cls:'row-subtotal'},
-    {label:'Borrowings', key:'Borrowings'},
-    {label:'Equity', key:'Equity', cls:'row-separator'},
+  // ---- ANNUAL P&L ----
+  const plRows = [
+    {label:'Interest Income', data:PL.IntIncome||{}, fmtAbs:true},
+    {label:'Interest Paid', data:PL.IntPaid||{}, fmtAbs:true},
+    {label:'Net Interest Income', data:PL.NII||{}, fmtAbs:true, cls:'row-subtotal row-separator'},
+    {label:'Non-Interest Income', data:PL.NonIntIncome||{}, fmtAbs:true},
+    {label:'Operating Revenue', data:PL.OpRevenue||{}, fmtAbs:true, cls:'row-subtotal row-separator'},
+    {label:'Operating Expenses', data:PL.Opex||{}, fmtAbs:true},
+    {label:'PPOP', data:PL.PPOP||{}, fmtAbs:true, cls:'row-subtotal row-separator'},
+    {label:'Provisions', data:PL.Provisions||{}, fmtAbs:true},
+    {label:'PBT', data:PL.PBT||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'Tax', data:PL.Tax||{}, fmtAbs:true},
+    {label:'PAT', data:PL.PAT||{}, fmtAbs:true, cls:'row-highlight row-separator'},
+    {label:'  PAT Growth YoY', data:computeYoY(PL.PAT||{}, aLabels), dec:1},
+    {label:'EPS (INR)', data:AA.EPS||{}, fmtNum:true, cls:'row-subtotal'},
+    {label:'  EPS Growth YoY', data:computeYoY(AA.EPS||{}, aLabels), dec:1},
+    {label:'BVPS (INR)', data:AA.BVPS||{}, fmtNum:true, cls:'row-subtotal'},
+    {label:'  BVPS Growth YoY', data:computeYoY(AA.BVPS||{}, aLabels), dec:1},
   ];
-  absItems.forEach(r => aRows.push({label:r.label, data:AA[r.key]||{}, fmtAbs:true, cls:r.cls||''}));
+  buildTable('tbl-pl-annual', plRows, aLabels, ACT_A, MRG_A);
 
-  aRows.push({label:'PAT', data:AA.PAT||{}, fmtAbs:true, cls:'row-subtotal'});
-  aRows.push({label:'  PAT Growth YoY', data:computeYoY(AA.PAT||{}, aLabels), dec:1, cls:'row-separator'});
-  aRows.push({label:'EPS (INR)', data:AA.EPS||{}, fmtNum:true, cls:'row-subtotal'});
-  aRows.push({label:'  EPS Growth YoY', data:computeYoY(AA.EPS||{}, aLabels), dec:1, cls:'row-separator'});
-  aRows.push({label:'BVPS (INR)', data:AA.BVPS||{}, fmtNum:true, cls:'row-subtotal'});
-  aRows.push({label:'  BVPS Growth YoY', data:computeYoY(AA.BVPS||{}, aLabels), dec:1});
+  // ---- ANNUAL BS ----
+  const bsRows = [
+    {label:'Net Loans', data:AA.NetAdvances||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'Cash & Bank Balance', data:AA.Cash||{}, fmtAbs:true},
+    {label:'Investments', data:AA.Investments||{}, fmtAbs:true},
+    {label:'Total Assets', data:AA.TotalAssets||{}, fmtAbs:true, cls:'row-highlight row-separator'},
+    {label:'Deposits', data:AA.Deposits||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'  Demand / CA', data:AA.Demand||{}, fmtAbs:true},
+    {label:'  Savings / SA', data:AA.Savings||{}, fmtAbs:true},
+    {label:'  CASA', data:AA.CASA||{}, fmtAbs:true},
+    {label:'  Term Deposits', data:AA.Term||{}, fmtAbs:true, cls:'row-separator'},
+    {label:'Borrowings', data:AA.Borrowings||{}, fmtAbs:true},
+    {label:'Total Liabilities', data:AA.TotalLiabilities||{}, fmtAbs:true, cls:'row-subtotal row-separator'},
+    {label:'Equity', data:AA.Equity||{}, fmtAbs:true, cls:'row-highlight'},
+  ];
+  buildTable('tbl-bs-annual', bsRows, aLabels, ACT_A, MRG_A);
 
-  buildTable('tbl-data-annual', aRows, aLabels, ACT_A, MRG_A);
-
-  // CAGR Summary — Base FY25, Last 10yr / Last 5yr / Next 3yr
+  // ---- CAGR Summary ----
   function cagrCalc(d, from, to) {
     const v1=d[from], v2=d[to];
     if (!v1||!v2||v1<=0||v2<=0) return null;
@@ -779,33 +872,128 @@ function renderData() {
     return Math.pow(v2/v1, 1/(y2-y1)) - 1;
   }
   const cagrItems = [
-    {label:'Net Advances', key:'NetAdvances'}, {label:'Deposits', key:'Deposits'},
-    {label:'CASA', key:'CASA'}, {label:'Total Assets', key:'TotalAssets'},
-    {label:'Equity', key:'Equity'}, {label:'PAT', key:'PAT'},
-    {label:'EPS', key:'EPS'}, {label:'BVPS', key:'BVPS'},
+    {label:'Net Advances', key:'NetAdvances', src:'abs'}, {label:'Deposits', key:'Deposits', src:'abs'},
+    {label:'CASA', key:'CASA', src:'abs'}, {label:'Total Assets', key:'TotalAssets', src:'abs'},
+    {label:'Equity', key:'Equity', src:'abs'},
+    {label:'NII', key:'NII', src:'pl'}, {label:'PPOP', key:'PPOP', src:'pl'},
+    {label:'PAT', key:'PAT', src:'pl'},
+    {label:'EPS', key:'EPS', src:'abs'}, {label:'BVPS', key:'BVPS', src:'abs'},
   ];
-  const cagrHeaders = [{label:'Last 10yr'}, {label:'Last 5yr'}, {label:'Next 3yr', cls:'est'}];
+  const cagrHeaders = [{label:'Last 10yr'}, {label:'Last 5yr'}, {label:'Next 5yr', cls:'est'}];
   const cagrRows = cagrItems.map(item => {
-    const d = AA[item.key] || {};
-    return {label: item.label, values: [cagrCalc(d,'FY15','FY25'), cagrCalc(d,'FY20','FY25'), cagrCalc(d,'FY25','FY28')]};
+    const d = item.src === 'pl' ? (PL[item.key]||{}) : (AA[item.key]||{});
+    return {label: item.label, values: [cagrCalc(d,'FY15','FY25'), cagrCalc(d,'FY20','FY25'), cagrCalc(d,'FY25','FY30')]};
   });
   buildCagrTable('tbl-cagr-summary', cagrHeaders, cagrRows);
 
-  // Quarterly
-  const qRows = [];
-  [{label:'Net Advances',key:'NetAdvances',cls:'row-subtotal'},{label:'Total Deposits',key:'Deposits',cls:'row-subtotal'},
-   {label:'  CA',key:'CA'},{label:'  SA',key:'SA'},{label:'  CASA',key:'CASA'},{label:'  Term',key:'Term',cls:'row-separator'},
-   {label:'Total Assets',key:'TotalAssets',cls:'row-subtotal'},{label:'Borrowings',key:'Borrowings'},
-   {label:'Equity',key:'Equity',cls:'row-separator'},
-  ].forEach(r => qRows.push({label:r.label, data:QA[r.key]||{}, fmtAbs:true, cls:r.cls||''}));
-  qRows.push({label:'PAT', data:QA.PAT||{}, fmtAbs:true, cls:'row-subtotal'});
-  const patYoYQ = {};
-  for (let i = 4; i < qLabels.length; i++) {
-    const curr = (QA.PAT||{})[qLabels[i]], prev = (QA.PAT||{})[qLabels[i-4]];
-    if (curr!=null && prev!=null && prev!==0) patYoYQ[qLabels[i]] = (curr-prev)/prev;
+  // ---- QUARTERLY P&L ----
+  const plqRows = [
+    {label:'Interest Income', data:PLQ.IntIncome||{}, fmtAbs:true},
+    {label:'Interest Paid', data:PLQ.IntPaid||{}, fmtAbs:true},
+    {label:'Net Interest Income', data:PLQ.NII||{}, fmtAbs:true, cls:'row-subtotal row-separator'},
+    {label:'Non-Interest Income', data:PLQ.NonIntIncome||{}, fmtAbs:true},
+    {label:'Operating Revenue', data:PLQ.OpRevenue||{}, fmtAbs:true, cls:'row-subtotal row-separator'},
+    {label:'Operating Expenses', data:PLQ.Opex||{}, fmtAbs:true},
+    {label:'PPOP', data:PLQ.PPOP||{}, fmtAbs:true, cls:'row-subtotal row-separator'},
+    {label:'Provisions', data:PLQ.Provisions||{}, fmtAbs:true},
+    {label:'PBT', data:PLQ.PBT||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'PAT', data:PLQ.PAT||{}, fmtAbs:true, cls:'row-highlight'},
+  ];
+  buildTable('tbl-pl-quarterly', plqRows, qLabels, ACT_Q, MRG_Q_GROWTH);
+
+  // ---- QUARTERLY BS ----
+  const bsqRows = [
+    {label:'Net Loans', data:QA.NetAdvances||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'Cash', data:QA.Cash||{}, fmtAbs:true},
+    {label:'Investments', data:QA.Investments||{}, fmtAbs:true},
+    {label:'Total Assets', data:QA.TotalAssets||{}, fmtAbs:true, cls:'row-highlight row-separator'},
+    {label:'Deposits', data:QA.Deposits||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'  CA', data:QA.CA||{}, fmtAbs:true},
+    {label:'  SA', data:QA.SA||{}, fmtAbs:true},
+    {label:'  CASA', data:QA.CASA||{}, fmtAbs:true},
+    {label:'  Term', data:QA.Term||{}, fmtAbs:true, cls:'row-separator'},
+    {label:'Borrowings', data:QA.Borrowings||{}, fmtAbs:true, cls:'row-separator'},
+    {label:'Equity', data:QA.Equity||{}, fmtAbs:true, cls:'row-highlight'},
+  ];
+  buildTable('tbl-bs-quarterly', bsqRows, qLabels, ACT_Q, MRG_Q_GROWTH);
+
+  // Populate CAGR dropdowns
+  updateCAGRPeriods();
+}
+
+function updateCAGRPeriods() {
+  const src = document.getElementById('cagr-source').value;
+  const manual = document.getElementById('cagr-manual');
+  const metricWrap = document.getElementById('cagr-metric-wrap');
+  const fromSel = document.getElementById('cagr-from');
+  const toSel = document.getElementById('cagr-to');
+
+  if (src === 'manual') {
+    manual.style.display = 'block';
+    metricWrap.style.display = 'none';
+    fromSel.parentElement.style.display = 'none';
+    toSel.parentElement.style.display = 'none';
+    document.querySelector('[onclick="calcCAGR()"]').style.display = 'none';
+    return;
   }
-  qRows.push({label:'  PAT Growth YoY', data:patYoYQ, dec:1});
-  buildTable('tbl-data-quarterly', qRows, qLabels, ACT_Q, MRG_Q_GROWTH);
+  manual.style.display = 'none';
+  metricWrap.style.display = '';
+  fromSel.parentElement.style.display = '';
+  toSel.parentElement.style.display = '';
+  document.querySelector('[onclick="calcCAGR()"]').style.display = '';
+
+  const AA = DATA.annual.absolute || {};
+  const QA = DATA.quarterly.absolute || {};
+  const labels = src === 'quarterly' ? Object.keys(QA.NetAdvances || QA.Deposits || {}) : Object.keys(AA.NetAdvances || AA.Deposits || {});
+
+  fromSel.innerHTML = labels.map(l => `<option value="${l}">${l}</option>`).join('');
+  toSel.innerHTML = labels.map(l => `<option value="${l}">${l}</option>`).join('');
+  if (src === 'annual') {
+    if (labels.includes('FY20')) fromSel.value = 'FY20';
+    if (labels.includes('FY25')) toSel.value = 'FY25';
+  } else {
+    if (labels.length > 8) fromSel.value = labels[labels.length - 9];
+    toSel.value = labels[labels.length - 1];
+  }
+}
+
+function calcCAGR() {
+  const src = document.getElementById('cagr-source').value;
+  const metric = document.getElementById('cagr-metric').value;
+  const from = document.getElementById('cagr-from').value;
+  const to = document.getElementById('cagr-to').value;
+  const pool = src === 'quarterly' ? (DATA.quarterly.absolute || {}) : (DATA.annual.absolute || {});
+  const d = pool[metric] || {};
+  const v1 = d[from], v2 = d[to];
+  if (!v1 || !v2 || v1 <= 0 || v2 <= 0) { document.getElementById('cagr-result').textContent = 'N/A'; return; }
+
+  let years;
+  if (src === 'quarterly') {
+    const allQ = Object.keys(d);
+    const i1 = allQ.indexOf(from), i2 = allQ.indexOf(to);
+    years = (i2 - i1) / 4;
+  } else {
+    years = parseInt(to.replace('FY','')) - parseInt(from.replace('FY',''));
+  }
+  if (years <= 0) { document.getElementById('cagr-result').textContent = 'N/A'; return; }
+
+  const cagr = Math.pow(v2 / v1, 1 / years) - 1;
+  const fmtV = v => metric==='EPS'||metric==='BVPS' ? v.toFixed(1) : Math.round(v).toLocaleString();
+  document.getElementById('cagr-result').innerHTML =
+    `<span style="font-size:11px;color:var(--text-muted)">CAGR:</span> ${(cagr*100).toFixed(1)}%` +
+    `<span style="font-size:10px;color:var(--text-muted);margin-left:6px;">(${fmtV(v1)} → ${fmtV(v2)}, ${years.toFixed(1)}yr)</span>`;
+}
+
+function calcCAGRManual() {
+  const v1 = parseFloat(document.getElementById('cagr-v1').value);
+  const v2 = parseFloat(document.getElementById('cagr-v2').value);
+  const yrs = parseFloat(document.getElementById('cagr-yrs').value);
+  if (!v1 || !v2 || !yrs || v1 <= 0 || v2 <= 0 || yrs <= 0) {
+    document.getElementById('cagr-result-manual').textContent = 'N/A'; return;
+  }
+  const cagr = Math.pow(v2 / v1, 1 / yrs) - 1;
+  document.getElementById('cagr-result-manual').innerHTML =
+    `<span style="font-size:11px;color:var(--text-muted)">CAGR:</span> ${(cagr*100).toFixed(1)}%`;
 }
 
 // ============ HDFC LTD TAB ============

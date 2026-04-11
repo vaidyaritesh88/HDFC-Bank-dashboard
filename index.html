@@ -199,14 +199,20 @@ body { font-family: 'Segoe UI', -apple-system, sans-serif; background:var(--bg);
         </select>
       </div>
     </div>
-    <div class="section"><div class="section-title">Annual Key Data (INR Mn)</div>
+    <div class="section"><div class="section-title">Annual P&L (INR Mn)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-pl-annual"></div></div>
+    </div>
+    <div class="section"><div class="section-title">Annual Balance Sheet (INR Mn)</div>
       <div style="display:flex;gap:16px;align-items:flex-start;">
-        <div class="card" style="flex:1;min-width:0;"><div class="dupont-table-wrap" id="tbl-data-annual"></div></div>
-        <div class="card" style="flex:0 0 auto;min-width:220px;"><div class="card-title">CAGR Summary</div><div class="dupont-table-wrap" id="tbl-cagr-summary"></div></div>
+        <div class="card" style="flex:1;min-width:0;"><div class="dupont-table-wrap" id="tbl-bs-annual"></div></div>
+        <div class="card" style="flex:0 0 auto;min-width:220px;"><div class="card-title">CAGR Summary (Base: FY25)</div><div class="dupont-table-wrap" id="tbl-cagr-summary"></div></div>
       </div>
     </div>
-    <div class="section"><div class="section-title">Quarterly Key Data (INR Mn)</div>
-      <div class="card"><div class="dupont-table-wrap" id="tbl-data-quarterly"></div></div>
+    <div class="section"><div class="section-title">Quarterly P&L (INR Mn)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-pl-quarterly"></div></div>
+    </div>
+    <div class="section"><div class="section-title">Quarterly Balance Sheet (INR Mn)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-bs-quarterly"></div></div>
     </div>
     <div class="section"><div class="section-title">CAGR Calculator</div>
       <div class="card" style="padding:16px;">
@@ -625,6 +631,41 @@ function renderSeg() {
 }
 
 // ============ DATA TAB ============
+// Helper: build a simple CAGR summary table via DOM
+function buildCagrTable(containerId, headers, rows) {
+  const container = document.getElementById(containerId);
+  container.textContent = '';
+  const table = document.createElement('table');
+  table.className = 'dupont-table';
+  const thead = document.createElement('thead');
+  const hr = document.createElement('tr');
+  hr.appendChild(document.createElement('th'));
+  headers.forEach(h => {
+    const th = document.createElement('th');
+    th.textContent = h.label;
+    if (h.cls) th.className = h.cls;
+    hr.appendChild(th);
+  });
+  thead.appendChild(hr);
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    const td0 = document.createElement('td');
+    td0.textContent = r.label;
+    tr.appendChild(td0);
+    r.values.forEach((v, i) => {
+      const td = document.createElement('td');
+      td.textContent = v != null ? (v * 100).toFixed(1) + '%' : '-';
+      if (headers[i] && headers[i].cls) td.className = headers[i].cls;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  container.appendChild(table);
+}
+
 // Compute YoY growth from absolute data
 function computeYoY(data, labels) {
   const result = {};
@@ -638,39 +679,50 @@ function computeYoY(data, labels) {
 function renderData() {
   const AA = DATA.annual.absolute || {};
   const QA = DATA.quarterly.absolute || {};
+  const PL = DATA.annual.pl || {};
+  const PLQ = DATA.quarterly.pl || {};
   const aLabels = Object.keys(AA.NetAdvances || AA.Deposits || {});
   const qLabels = Object.keys(QA.NetAdvances || QA.Deposits || {});
 
-  // Build annual rows with YoY growth for PAT, EPS, BVPS
-  const aRows = [];
-  const absItems = [
-    {label:'Net Advances', key:'NetAdvances', cls:'row-subtotal'},
-    {label:'Total Deposits', key:'Deposits', cls:'row-subtotal'},
-    {label:'  CA (Demand)', key:'Demand'},
-    {label:'  SA (Savings)', key:'Savings'},
-    {label:'  CASA', key:'CASA'},
-    {label:'  Term Deposits', key:'Term', cls:'row-separator'},
-    {label:'Total Assets', key:'TotalAssets', cls:'row-subtotal'},
-    {label:'Borrowings', key:'Borrowings'},
-    {label:'Equity', key:'Equity', cls:'row-separator'},
+  // ---- ANNUAL P&L ----
+  const plRows = [
+    {label:'Interest Income', data:PL.IntIncome||{}, fmtAbs:true},
+    {label:'Interest Paid', data:PL.IntPaid||{}, fmtAbs:true},
+    {label:'Net Interest Income', data:PL.NII||{}, fmtAbs:true, cls:'row-subtotal row-separator'},
+    {label:'Non-Interest Income', data:PL.NonIntIncome||{}, fmtAbs:true},
+    {label:'Operating Revenue', data:PL.OpRevenue||{}, fmtAbs:true, cls:'row-subtotal row-separator'},
+    {label:'Operating Expenses', data:PL.Opex||{}, fmtAbs:true},
+    {label:'PPOP', data:PL.PPOP||{}, fmtAbs:true, cls:'row-subtotal row-separator'},
+    {label:'Provisions', data:PL.Provisions||{}, fmtAbs:true},
+    {label:'PBT', data:PL.PBT||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'Tax', data:PL.Tax||{}, fmtAbs:true},
+    {label:'PAT', data:PL.PAT||{}, fmtAbs:true, cls:'row-highlight row-separator'},
+    {label:'  PAT Growth YoY', data:computeYoY(PL.PAT||{}, aLabels), dec:1},
+    {label:'EPS (INR)', data:AA.EPS||{}, fmtNum:true, cls:'row-subtotal'},
+    {label:'  EPS Growth YoY', data:computeYoY(AA.EPS||{}, aLabels), dec:1},
+    {label:'BVPS (INR)', data:AA.BVPS||{}, fmtNum:true, cls:'row-subtotal'},
+    {label:'  BVPS Growth YoY', data:computeYoY(AA.BVPS||{}, aLabels), dec:1},
   ];
-  absItems.forEach(r => aRows.push({label:r.label, data:AA[r.key]||{}, fmtAbs:true, cls:r.cls||''}));
+  buildTable('tbl-pl-annual', plRows, aLabels, ACT_A, MRG_A);
 
-  // PAT + YoY
-  aRows.push({label:'PAT', data:AA.PAT||{}, fmtAbs:true, cls:'row-subtotal'});
-  aRows.push({label:'  PAT Growth YoY', data:computeYoY(AA.PAT||{}, aLabels), dec:1, cls:'row-separator'});
+  // ---- ANNUAL BS ----
+  const bsRows = [
+    {label:'Net Loans', data:AA.NetAdvances||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'Cash & Bank Balance', data:AA.Cash||{}, fmtAbs:true},
+    {label:'Investments', data:AA.Investments||{}, fmtAbs:true},
+    {label:'Total Assets', data:AA.TotalAssets||{}, fmtAbs:true, cls:'row-highlight row-separator'},
+    {label:'Deposits', data:AA.Deposits||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'  Demand / CA', data:AA.Demand||{}, fmtAbs:true},
+    {label:'  Savings / SA', data:AA.Savings||{}, fmtAbs:true},
+    {label:'  CASA', data:AA.CASA||{}, fmtAbs:true},
+    {label:'  Term Deposits', data:AA.Term||{}, fmtAbs:true, cls:'row-separator'},
+    {label:'Borrowings', data:AA.Borrowings||{}, fmtAbs:true},
+    {label:'Total Liabilities', data:AA.TotalLiabilities||{}, fmtAbs:true, cls:'row-subtotal row-separator'},
+    {label:'Equity', data:AA.Equity||{}, fmtAbs:true, cls:'row-highlight'},
+  ];
+  buildTable('tbl-bs-annual', bsRows, aLabels, ACT_A, MRG_A);
 
-  // EPS + YoY
-  aRows.push({label:'EPS (INR)', data:AA.EPS||{}, fmtNum:true, cls:'row-subtotal'});
-  aRows.push({label:'  EPS Growth YoY', data:computeYoY(AA.EPS||{}, aLabels), dec:1, cls:'row-separator'});
-
-  // BVPS + YoY
-  aRows.push({label:'BVPS (INR)', data:AA.BVPS||{}, fmtNum:true, cls:'row-subtotal'});
-  aRows.push({label:'  BVPS Growth YoY', data:computeYoY(AA.BVPS||{}, aLabels), dec:1});
-
-  buildTable('tbl-data-annual', aRows, aLabels, ACT_A, MRG_A);
-
-  // CAGR Summary table
+  // ---- CAGR Summary ----
   function cagrCalc(d, from, to) {
     const v1=d[from], v2=d[to];
     if (!v1||!v2||v1<=0||v2<=0) return null;
@@ -679,46 +731,50 @@ function renderData() {
     return Math.pow(v2/v1, 1/(y2-y1)) - 1;
   }
   const cagrItems = [
-    {label:'Net Advances', key:'NetAdvances'}, {label:'Deposits', key:'Deposits'},
-    {label:'CASA', key:'CASA'}, {label:'Total Assets', key:'TotalAssets'},
-    {label:'Equity', key:'Equity'}, {label:'PAT', key:'PAT'},
-    {label:'EPS', key:'EPS'}, {label:'BVPS', key:'BVPS'},
+    {label:'Net Advances', key:'NetAdvances', src:'abs'}, {label:'Deposits', key:'Deposits', src:'abs'},
+    {label:'CASA', key:'CASA', src:'abs'}, {label:'Total Assets', key:'TotalAssets', src:'abs'},
+    {label:'Equity', key:'Equity', src:'abs'},
+    {label:'NII', key:'NII', src:'pl'}, {label:'PPOP', key:'PPOP', src:'pl'},
+    {label:'PAT', key:'PAT', src:'pl'},
+    {label:'EPS', key:'EPS', src:'abs'}, {label:'BVPS', key:'BVPS', src:'abs'},
   ];
-  const cagrCols = ['Last 10yr','Last 5yr','Next 5yr'];
-  let ch = '<table class="dupont-table"><thead><tr><th></th>';
-  cagrCols.forEach(c => ch += `<th>${c}</th>`);
-  ch += '</tr></thead><tbody>';
-  cagrItems.forEach(item => {
-    const d = AA[item.key] || {};
-    const c10 = cagrCalc(d,'FY15','FY25');
-    const c5 = cagrCalc(d,'FY20','FY25');
-    const c5f = cagrCalc(d,'FY25','FY30');
-    ch += `<tr><td>${item.label}</td>`;
-    [c10,c5,c5f].forEach((v,i) => {
-      const ec = i===2?' est':'';
-      ch += `<td class="${ec}">${v!=null?(v*100).toFixed(1)+'%':'-'}</td>`;
-    });
-    ch += '</tr>';
+  const cagrHeaders = [{label:'Last 10yr'}, {label:'Last 5yr'}, {label:'Next 5yr', cls:'est'}];
+  const cagrRows = cagrItems.map(item => {
+    const d = item.src === 'pl' ? (PL[item.key]||{}) : (AA[item.key]||{});
+    return {label: item.label, values: [cagrCalc(d,'FY15','FY25'), cagrCalc(d,'FY20','FY25'), cagrCalc(d,'FY25','FY30')]};
   });
-  ch += '</tbody></table>';
-  document.getElementById('tbl-cagr-summary').innerHTML = ch;
+  buildCagrTable('tbl-cagr-summary', cagrHeaders, cagrRows);
 
-  // Quarterly rows with PAT YoY
-  const qRows = [];
-  [{label:'Net Advances',key:'NetAdvances',cls:'row-subtotal'},{label:'Total Deposits',key:'Deposits',cls:'row-subtotal'},
-   {label:'  CA',key:'CA'},{label:'  SA',key:'SA'},{label:'  CASA',key:'CASA'},{label:'  Term',key:'Term',cls:'row-separator'},
-   {label:'Total Assets',key:'TotalAssets',cls:'row-subtotal'},{label:'Borrowings',key:'Borrowings'},
-   {label:'Equity',key:'Equity',cls:'row-separator'},
-  ].forEach(r => qRows.push({label:r.label, data:QA[r.key]||{}, fmtAbs:true, cls:r.cls||''}));
-  qRows.push({label:'PAT', data:QA.PAT||{}, fmtAbs:true, cls:'row-subtotal'});
-  // Quarterly PAT YoY (4-quarter lookback)
-  const patYoYQ = {};
-  for (let i = 4; i < qLabels.length; i++) {
-    const curr = (QA.PAT||{})[qLabels[i]], prev = (QA.PAT||{})[qLabels[i-4]];
-    if (curr!=null && prev!=null && prev!==0) patYoYQ[qLabels[i]] = (curr-prev)/prev;
-  }
-  qRows.push({label:'  PAT Growth YoY', data:patYoYQ, dec:1});
-  buildTable('tbl-data-quarterly', qRows, qLabels, ACT_Q, MRG_Q_GROWTH);
+  // ---- QUARTERLY P&L ----
+  const plqRows = [
+    {label:'Interest Income', data:PLQ.IntIncome||{}, fmtAbs:true},
+    {label:'Interest Paid', data:PLQ.IntPaid||{}, fmtAbs:true},
+    {label:'Net Interest Income', data:PLQ.NII||{}, fmtAbs:true, cls:'row-subtotal row-separator'},
+    {label:'Non-Interest Income', data:PLQ.NonIntIncome||{}, fmtAbs:true},
+    {label:'Operating Revenue', data:PLQ.OpRevenue||{}, fmtAbs:true, cls:'row-subtotal row-separator'},
+    {label:'Operating Expenses', data:PLQ.Opex||{}, fmtAbs:true},
+    {label:'PPOP', data:PLQ.PPOP||{}, fmtAbs:true, cls:'row-subtotal row-separator'},
+    {label:'Provisions', data:PLQ.Provisions||{}, fmtAbs:true},
+    {label:'PBT', data:PLQ.PBT||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'PAT', data:PLQ.PAT||{}, fmtAbs:true, cls:'row-highlight'},
+  ];
+  buildTable('tbl-pl-quarterly', plqRows, qLabels, ACT_Q, MRG_Q_GROWTH);
+
+  // ---- QUARTERLY BS ----
+  const bsqRows = [
+    {label:'Net Loans', data:QA.NetAdvances||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'Cash', data:QA.Cash||{}, fmtAbs:true},
+    {label:'Investments', data:QA.Investments||{}, fmtAbs:true},
+    {label:'Total Assets', data:QA.TotalAssets||{}, fmtAbs:true, cls:'row-highlight row-separator'},
+    {label:'Deposits', data:QA.Deposits||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'  CA', data:QA.CA||{}, fmtAbs:true},
+    {label:'  SA', data:QA.SA||{}, fmtAbs:true},
+    {label:'  CASA', data:QA.CASA||{}, fmtAbs:true},
+    {label:'  Term', data:QA.Term||{}, fmtAbs:true, cls:'row-separator'},
+    {label:'Borrowings', data:QA.Borrowings||{}, fmtAbs:true, cls:'row-separator'},
+    {label:'Equity', data:QA.Equity||{}, fmtAbs:true, cls:'row-highlight'},
+  ];
+  buildTable('tbl-bs-quarterly', bsqRows, qLabels, ACT_Q, MRG_Q_GROWTH);
 
   // Populate CAGR dropdowns
   updateCAGRPeriods();
@@ -830,6 +886,14 @@ function onScenarioChange(val) {
     if (DATA.annual.segGrowth && DATA.annual.segGrowth[key]) {
       for (const fy of fys) {
         if (fcastData[fy] != null) DATA.annual.segGrowth[key][fy] = fcastData[fy];
+      }
+    }
+  }
+  // Swap P&L
+  for (const [key, fcastData] of Object.entries(sc.pl || {})) {
+    if (DATA.annual.pl && DATA.annual.pl[key]) {
+      for (const fy of fys) {
+        if (fcastData[fy] != null) DATA.annual.pl[key][fy] = fcastData[fy];
       }
     }
   }
