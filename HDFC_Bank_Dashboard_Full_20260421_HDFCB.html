@@ -1,3 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HDFC Bank - Financial Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+:root {
+  --bg: #f8f9fa;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --text: #1a202c;
+  --text-muted: #64748b;
+  --accent: #004b8d;
+  --accent-light: #e8f0fe;
+  --actual: #004b8d;
+  --estimate: #94b8d9;
+  --positive: #16a34a;
+  --negative: #dc2626;
+  --grid: #f1f5f9;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'Segoe UI', -apple-system, sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
+
+/* Header */
+.header { background: var(--card); border-bottom:1px solid var(--border); padding:12px 24px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow: var(--shadow); }
+.header h1 { font-size:18px; font-weight:700; color:var(--accent); }
+.header h1 span { color: var(--text-muted); font-weight:400; font-size:14px; margin-left:8px; }
+.tab-group { display:flex; gap:2px; background:var(--grid); border-radius:6px; padding:2px; }
+.tab { padding:6px 16px; border-radius:5px; cursor:pointer; font-size:13px; font-weight:500; color:var(--text-muted); border:none; background:transparent; transition:all 0.15s; }
+.tab.active { background:var(--card); color:var(--accent); box-shadow:var(--shadow); }
+.tab:hover:not(.active) { color:var(--text); }
+
+/* Layout */
+.container { max-width:1400px; margin:0 auto; padding:16px; }
+.section { margin-bottom:20px; }
+.section-title { font-size:14px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; padding-left:4px; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+.grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+
+/* Cards */
+.card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:16px; box-shadow:var(--shadow); }
+.card-title { font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.3px; margin-bottom:8px; }
+.chart-container { position:relative; width:100%; }
+.chart-container canvas { width:100% !important; }
+
+/* KPI Cards */
+.kpi { text-align:center; padding:12px; }
+.kpi-value { font-size:22px; font-weight:700; color:var(--accent); }
+.kpi-label { font-size:11px; color:var(--text-muted); margin-top:2px; }
+.kpi-delta { font-size:11px; font-weight:500; margin-top:4px; }
+.kpi-delta.up { color:var(--positive); }
+.kpi-delta.down { color:var(--negative); }
+
+/* DuPont Tree */
+.dupont { display:flex; flex-direction:column; align-items:center; gap:8px; padding:12px 0; }
+.dupont-row { display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; }
+.dupont-node { text-align:center; padding:8px 14px; border-radius:6px; border:1px solid var(--border); background:var(--card); min-width:90px; }
+.dupont-node.highlight { background:var(--accent-light); border-color:var(--accent); }
+.dupont-node .val { font-size:16px; font-weight:700; color:var(--accent); }
+.dupont-node .lbl { font-size:10px; color:var(--text-muted); text-transform:uppercase; }
+.dupont-op { font-size:14px; font-weight:700; color:var(--text-muted); }
+.dupont-arrow { color:var(--text-muted); font-size:18px; }
+
+/* Legend */
+.legend { display:flex; gap:16px; align-items:center; justify-content:flex-end; margin-bottom:8px; }
+.legend-item { display:flex; align-items:center; gap:4px; font-size:11px; color:var(--text-muted); }
+.legend-dot { width:10px; height:10px; border-radius:2px; }
+
+/* View panel */
+.view-panel { display:none; }
+.view-panel.active { display:block; }
+
+/* DuPont Table */
+.dupont-table-wrap { overflow-x:auto; margin-top:8px; }
+.dupont-table { width:100%; border-collapse:collapse; font-size:11px; white-space:nowrap; }
+.dupont-table th, .dupont-table td { padding:5px 8px; text-align:right; border-bottom:1px solid var(--grid); }
+.dupont-table th { font-weight:600; color:var(--text-muted); text-transform:uppercase; font-size:10px; letter-spacing:0.3px; position:sticky; top:0; background:var(--card); }
+.dupont-table th:first-child, .dupont-table td:first-child { text-align:left; font-weight:500; position:sticky; left:0; background:var(--card); z-index:1; min-width:120px; }
+.dupont-table th:first-child { z-index:2; }
+.dupont-table td { font-variant-numeric:tabular-nums; }
+.dupont-table tr.row-highlight td { font-weight:700; color:var(--accent); background:#f8fafd; }
+.dupont-table tr.row-separator td { border-bottom:2px solid var(--border); }
+.dupont-table tr.row-subtotal td { font-weight:700; }
+.dupont-table .est { color:var(--estimate); }
+.dupont-table tr:hover td { background:#f1f5f9; }
+.dupont-table tr.row-highlight:hover td { background:#e8f0fe; }
+.dupont-table td.indent { padding-left:20px; font-weight:400; }
+.dupont-table th.merger { background:#fff7ed; color:#c2410c; }
+.dupont-table td.merger { background:#fff7ed; }
+
+/* Responsive */
+@media (max-width:1024px) {
+  .grid-2, .grid-3 { grid-template-columns:1fr; }
+  .grid-4 { grid-template-columns:1fr 1fr; }
+}
+.section-note { font-size:10px; color:var(--text-muted); margin-top:4px; padding-left:4px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>HDFC Bank <span>Financial Dashboard</span></h1>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--actual)"></div> Actual</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--estimate)"></div> Estimate</div>
+    </div>
+    <div class="tab-group">
+      <button class="tab active" onclick="switchView('annual',event)">Annual</button>
+      <button class="tab" onclick="switchView('quarterly',event)">Quarterly</button>
+      <button class="tab" onclick="switchView('segments',event)">Loan Segments</button>
+      <button class="tab" onclick="switchView('data',event)">Data</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <!-- ============ ANNUAL VIEW ============ -->
+  <div id="view-annual" class="view-panel active">
+    <div class="section" style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px;">
+      <label style="font-size:12px;color:var(--text-muted);margin-right:8px;font-weight:500;">Forecast Scenario:</label>
+      <select id="scenario-select-annual" onchange="onScenarioChange(this.value)" style="padding:5px 10px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:var(--card);color:var(--accent);font-weight:600;cursor:pointer;">
+        <option value="base" selected>Base</option>
+        <option value="upside">Upside</option>
+        <option value="downside">Downside</option>
+      </select>
+    </div>
+    <div class="section"><div class="section-title">1. DuPont Decomposition (% of Avg Assets)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-dupont-a"></div></div>
+    </div>
+    <div class="section"><div class="section-title">2. Key Ratios: Yield, CoF, NIM, Cost/Income, Credit Cost, LDR</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-nim-a"></div></div>
+      <div class="section-note">Yield = Interest Income / Avg IEA | CoF = Interest Expense / Avg IBL | NIM = NII / Avg IEA</div>
+    </div>
+    <div class="section"><div class="section-title">3. Growth & CASA</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-growth-casa-a"></div></div>
+      <div class="grid-2" style="margin-top:12px">
+        <div class="card"><div class="card-title">Loan & Deposit Growth (%)</div><div class="chart-container"><canvas id="ch-loangr-a"></canvas></div></div>
+        <div class="card"><div class="card-title">CASA, CA & SA Growth (%)</div><div class="chart-container"><canvas id="ch-depgr-a"></canvas></div></div>
+      </div>
+      <div class="card" style="margin-top:12px"><div class="card-title">CASA Ratio & LDR (%)</div><div class="chart-container"><canvas id="ch-casa-ldr-a"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- ============ QUARTERLY VIEW ============ -->
+  <div id="view-quarterly" class="view-panel">
+    <div class="section"><div class="section-title">1. DuPont Decomposition (% of Avg Assets, Annualized)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-dupont-q"></div></div>
+    </div>
+    <div class="section"><div class="section-title">2. Key Ratios: Yield, CoF, NIM, Cost/Income, Credit Cost, LDR</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-nim-q"></div></div>
+    </div>
+    <div class="section"><div class="section-title">3. Growth & CASA</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-growth-casa-q"></div></div>
+      <div class="grid-2" style="margin-top:12px">
+        <div class="card"><div class="card-title">Loan & Deposit Growth YoY (%)</div><div class="chart-container"><canvas id="ch-loangr-q"></canvas></div></div>
+        <div class="card"><div class="card-title">CASA, CA & SA Growth YoY (%)</div><div class="chart-container"><canvas id="ch-depgr-q"></canvas></div></div>
+      </div>
+      <div class="card" style="margin-top:12px"><div class="card-title">CASA Ratio & LDR (%)</div><div class="chart-container"><canvas id="ch-casa-ldr-q"></canvas></div></div>
+    </div>
+    <div class="section"><div class="section-title">4. QoQ Growth</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-qoq-q"></div></div>
+    </div>
+  </div>
+
+  <!-- ============ SEGMENTS VIEW ============ -->
+  <div id="view-segments" class="view-panel">
+    <div class="section"><div class="section-title">1. Loan Book Breakup (INR Mn)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-loanmix-abs"></div></div>
+      <div class="section-note">Total AUM = Retail + CRB + Corporate. Gross Advances = Total AUM + eHDFCL - IBPC/BRDS. Net Advances (BS item) = Gross Advances - Specific Provisions.</div>
+    </div>
+    <div class="section"><div class="section-title">2. Loan Composition (% of Total AUM)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-loanmix-pct"></div></div>
+      <div class="card" style="margin-top:12px"><div class="chart-container" style="height:350px"><canvas id="ch-loanmix-pct"></canvas></div></div>
+    </div>
+    <div class="section"><div class="section-title">3. Loan Growth by Segment (YoY %)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-loanmix-yoy"></div></div>
+      <div class="card" style="margin-top:12px"><div class="chart-container"><canvas id="ch-loanmix-yoy"></canvas></div></div>
+    </div>
+    <div class="section"><div class="section-title">4. Retail Loan Sub-Segment Composition (% of Total Retail)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-retail-comp"></div></div>
+      <div class="card" style="margin-top:12px"><div class="chart-container" style="height:350px"><canvas id="ch-retail-comp"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- ============ DATA VIEW ============ -->
+  <div id="view-data" class="view-panel">
+    <div class="section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="section-title" style="margin-bottom:0">Scenario</div>
+        <select id="scenario-select" onchange="onScenarioChange(this.value)" style="padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--card);color:var(--accent);font-weight:600;cursor:pointer;">
+          <option value="base" selected>Base</option>
+          <option value="upside">Upside</option>
+          <option value="downside">Downside</option>
+        </select>
+      </div>
+    </div>
+    <div class="section"><div class="section-title">Annual Key Data (INR Mn)</div>
+      <div style="display:flex;gap:16px;align-items:flex-start;">
+        <div class="card" style="flex:1;min-width:0;"><div class="dupont-table-wrap" id="tbl-data-annual"></div></div>
+        <div class="card" style="flex:0 0 auto;min-width:220px;"><div class="card-title">CAGR Summary</div><div class="dupont-table-wrap" id="tbl-cagr-summary"></div></div>
+      </div>
+    </div>
+    <div class="section"><div class="section-title">Quarterly Key Data (INR Mn)</div>
+      <div class="card"><div class="dupont-table-wrap" id="tbl-data-quarterly"></div></div>
+    </div>
+    <div class="section"><div class="section-title">CAGR Calculator</div>
+      <div class="card" style="padding:16px;">
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;">
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Source</label>
+            <select id="cagr-source" onchange="updateCAGRPeriods()" style="padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;">
+              <option value="annual">Annual</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="manual">Manual Input</option>
+            </select>
+          </div>
+          <div id="cagr-metric-wrap">
+            <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Metric</label>
+            <select id="cagr-metric" style="padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;min-width:140px;">
+              <option value="NetAdvances">Net Advances</option>
+              <option value="Deposits">Deposits</option>
+              <option value="CASA">CASA</option>
+              <option value="SA">Savings</option>
+              <option value="Demand">CA / Demand</option>
+              <option value="Term">Term Deposits</option>
+              <option value="TotalAssets">Total Assets</option>
+              <option value="Equity">Equity</option>
+              <option value="PAT">PAT</option>
+              <option value="EPS">EPS</option>
+              <option value="BVPS">BVPS</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">From</label>
+            <select id="cagr-from" style="padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;"></select>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">To</label>
+            <select id="cagr-to" style="padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;"></select>
+          </div>
+          <button onclick="calcCAGR()" style="padding:5px 14px;background:var(--accent);color:white;border:none;border-radius:5px;font-size:12px;cursor:pointer;font-weight:600;">Calculate</button>
+          <div id="cagr-result" style="font-size:15px;font-weight:700;color:var(--accent);min-width:80px;"></div>
+        </div>
+        <div id="cagr-manual" style="display:none;margin-top:8px;">
+          <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+            <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Start Value</label>
+              <input id="cagr-v1" type="number" style="padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;width:120px;"></div>
+            <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">End Value</label>
+              <input id="cagr-v2" type="number" style="padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;width:120px;"></div>
+            <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">Years</label>
+              <input id="cagr-yrs" type="number" style="padding:5px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;width:70px;" value="5"></div>
+            <button onclick="calcCAGRManual()" style="padding:5px 14px;background:var(--accent);color:white;border:none;border-radius:5px;font-size:12px;cursor:pointer;font-weight:600;">Calculate</button>
+            <div id="cagr-result-manual" style="font-size:15px;font-weight:700;color:var(--accent);"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
 const DATA = {
   "annual": {
     "metrics": {
@@ -7674,1761 +7940,6 @@ const DATA = {
       }
     }
   },
-  "merger": {
-    "combined": {
-      "Loans": {
-        "4Q21": 16311346.3,
-        "3Q22": 17998944.7,
-        "4Q20": 14446058.8,
-        "1Q21": 14689838.6,
-        "4Q19": 12260082.2,
-        "1Q18": 8945488.0,
-        "1Q20": 12462968.1,
-        "1Q23": 19761076.8,
-        "2Q19": 11327881.0,
-        "1Q22": 16481900.0,
-        "2Q24": 23312329.3,
-        "2Q18": 9291349.4,
-        "4Q18": 10211410.0,
-        "4Q22": 19371630.0,
-        "1Q25": 24635208.2,
-        "4Q24": 24848615.2,
-        "4Q25": 26196086.1,
-        "3Q23": 21091638.5,
-        "4Q23": 22210929.0,
-        "3Q25": 25182482.4,
-        "3Q24": 24460756.6,
-        "3Q18": 9733686.6,
-        "1Q19": 10832236.9,
-        "2Q22": 17195977.5,
-        "3Q19": 11703721.7,
-        "2Q21": 15134561.3,
-        "1Q26": 26284342.0,
-        "2Q23": 20751422.2,
-        "2Q26": 27463597.8,
-        "2Q20": 13237227.7,
-        "3Q20": 13775015.2,
-        "3Q26": 28214465.0,
-        "2Q25": 24951203.4,
-        "3Q21": 15662430.0,
-        "1Q24": 23389617.9779
-      },
-      "TotalAssets": {
-        "4Q21": 23144691.0,
-        "3Q22": 25617431.4,
-        "4Q20": 20546048.3,
-        "1Q21": 20898163.1,
-        "4Q19": 17033182.6,
-        "1Q18": 11823466.4,
-        "1Q20": 17375168.5,
-        "1Q23": 27455645.3,
-        "2Q19": 15969090.9,
-        "1Q22": 23234754.4,
-        "2Q24": 34163102.1,
-        "2Q18": 12345613.5,
-        "4Q18": 14628388.0,
-        "4Q22": 26884461.4,
-        "1Q25": 35672495.3,
-        "4Q24": 36176230.6,
-        "4Q25": 39101989.400000006,
-        "3Q23": 29682055.8,
-        "4Q23": 31682882.2,
-        "3Q25": 37589645.400000006,
-        "3Q24": 34926389.1,
-        "3Q18": 12574669.2,
-        "1Q19": 14953170.9,
-        "2Q22": 24390470.7,
-        "3Q19": 16163223.8,
-        "2Q21": 21507401.2,
-        "1Q26": 39540766.599999994,
-        "2Q23": 28803670.9,
-        "2Q26": 40030083.7,
-        "2Q20": 18159033.5,
-        "3Q20": 18976836.2,
-        "3Q26": 40889872.9,
-        "2Q25": 36880653.7,
-        "3Q21": 22147336.8,
-        "1Q24": 33818581.5451
-      },
-      "Equity": {
-        "4Q21": 3125034.6,
-        "3Q22": 3450395.7,
-        "4Q20": 2571440.8,
-        "1Q21": 2694865.9,
-        "4Q19": 2262175.0,
-        "1Q18": 1357055.8,
-        "1Q20": 2369190.9,
-        "1Q23": 3686259.4,
-        "2Q19": 2080331.2,
-        "1Q22": 3246779.4,
-        "2Q24": 4050298.4,
-        "2Q18": 1367089.6,
-        "4Q18": 1712283.4,
-        "4Q22": 3603439.3,
-        "1Q25": 4586822.699999999,
-        "4Q24": 4402458.000000001,
-        "4Q25": 5014246.2,
-        "3Q23": 3417242.0,
-        "4Q23": 4141837.6,
-        "3Q25": 4830208.8,
-        "3Q24": 4222998.1,
-        "3Q18": 1474096.1,
-        "1Q19": 1759168.0,
-        "2Q22": 3305269.4,
-        "3Q19": 2185606.1,
-        "2Q21": 2862458.6,
-        "1Q26": 5226401.4,
-        "2Q23": 3775511.1,
-        "2Q26": 5224085.9,
-        "2Q20": 2374684.7,
-        "3Q20": 2531747.6,
-        "3Q26": 5424549.399999999,
-        "2Q25": 4634707.600000001,
-        "3Q21": 3012243.2,
-        "1Q24": 5020077.2157
-      },
-      "PAT": {
-        "4Q21": 113662.358,
-        "3Q22": 136028.9,
-        "4Q20": 91602.2586,
-        "1Q21": 97101.4587,
-        "4Q19": 87467.0718,
-        "1Q18": 53183.1736,
-        "1Q20": 87712.6722,
-        "1Q23": 128648.1,
-        "2Q19": 74728.171,
-        "1Q22": 107303.1,
-        "2Q24": 159761.1,
-        "2Q18": 61292.2714,
-        "4Q18": 70559.8723,
-        "4Q22": 137555.0,
-        "1Q25": 161747.5,
-        "4Q24": 165118.5,
-        "4Q25": 176161.4,
-        "3Q23": 114204.4,
-        "4Q23": 165029.5,
-        "3Q25": 167355.0,
-        "3Q24": 163725.4,
-        "3Q18": 99426.0705,
-        "1Q19": 67914.472,
-        "2Q22": 126148.1,
-        "3Q19": 76996.5744,
-        "2Q21": 103832.3572,
-        "1Q26": 173102.1,
-        "2Q23": 150600.2,
-        "2Q26": 186412.8,
-        "2Q20": 103062.0681,
-        "3Q20": 157889.7681,
-        "3Q26": 186537.5,
-        "2Q25": 168209.7,
-        "3Q21": 116841.2568
-      },
-      "NII": {
-        "4Q21": 211471.658,
-        "3Q22": 227272.8,
-        "4Q20": 187468.2586,
-        "1Q21": 190007.6587,
-        "4Q19": 162506.1718,
-        "1Q18": 116456.3736,
-        "1Q20": 163360.5722,
-        "1Q23": 239283.2,
-        "2Q19": 143921.971,
-        "1Q22": 211341.1,
-        "2Q24": 273852.3,
-        "2Q18": 120207.3714,
-        "4Q18": 133072.9723,
-        "4Q22": 234736.1,
-        "1Q25": 298371.4,
-        "4Q24": 290768.2,
-        "4Q25": 320658.0,
-        "3Q23": 218490.2,
-        "4Q23": 286733.1,
-        "3Q25": 306532.5,
-        "3Q24": 284713.4,
-        "3Q18": 127563.1705,
-        "1Q19": 135551.172,
-        "2Q22": 217939.7,
-        "3Q19": 154569.9744,
-        "2Q21": 193792.3572,
-        "1Q26": 314379.7,
-        "2Q23": 256604.0,
-        "2Q26": 315515.0,
-        "2Q20": 164652.7681,
-        "3Q20": 173860.8681,
-        "3Q26": 326150.0,
-        "2Q25": 301139.0,
-        "3Q21": 203223.5568
-      },
-      "TotalIncome": {
-        "4Q21": 298555.858,
-        "3Q22": 315461.9,
-        "4Q20": 255564.5586,
-        "1Q21": 249429.7587,
-        "4Q19": 223654.3718,
-        "1Q18": 154231.0736,
-        "1Q20": 235213.4722,
-        "1Q23": 315622.6,
-        "2Q19": 199914.371,
-        "1Q22": 284386.8,
-        "2Q24": 380930.7,
-        "2Q18": 165203.6714,
-        "4Q18": 182528.4723,
-        "4Q22": 320474.9,
-        "1Q25": 405052.5,
-        "4Q24": 472430.7,
-        "4Q25": 440936.8,
-        "3Q23": 288500.9,
-        "4Q23": 385903.8,
-        "3Q25": 421068.1,
-        "3Q24": 396083.8,
-        "3Q18": 223283.9705,
-        "1Q19": 182309.372,
-        "2Q22": 307381.0,
-        "3Q19": 208216.4744,
-        "2Q21": 262024.3572,
-        "1Q26": 440378.0,
-        "2Q23": 350930.4,
-        "2Q26": 459015.2,
-        "2Q20": 247671.8681,
-        "3Q20": 333640.8681,
-        "3Q26": 458688.4,
-        "2Q25": 415966.3,
-        "3Q21": 286445.2568
-      },
-      "Opex": {
-        "4Q21": -86826.6,
-        "3Q22": -93731.0,
-        "4Q20": -79244.3,
-        "1Q21": -65150.5,
-        "4Q19": -68012.6,
-        "1Q18": -50177.4,
-        "1Q20": -67355.3,
-        "1Q23": -99130.2,
-        "2Q19": -59770.0,
-        "1Q22": -76097.8,
-        "2Q24": -153991.9,
-        "2Q18": -50307.1,
-        "4Q18": -55340.6,
-        "4Q22": -96385.9,
-        "1Q25": -166206.1,
-        "4Q24": -179688.3,
-        "4Q25": -175569.8,
-        "3Q23": -75896.0,
-        "4Q23": -127611.0,
-        "3Q25": -171064.1,
-        "3Q24": -159610.8,
-        "3Q18": -52029.7,
-        "1Q19": -54742.8,
-        "2Q22": -87480.4,
-        "3Q19": -63802.6,
-        "2Q21": -76892.5,
-        "1Q26": -174338.4,
-        "2Q23": -106353.3,
-        "2Q26": -179779.2,
-        "2Q20": -70267.4,
-        "3Q20": -75128.6,
-        "3Q26": -187710.4,
-        "2Q25": -168908.9,
-        "3Q21": -80376.6
-      },
-      "PPOP": {
-        "4Q21": 385382.458,
-        "3Q22": 409192.9,
-        "4Q20": 334808.8586,
-        "1Q21": 314580.2587,
-        "4Q19": 291666.9718,
-        "1Q18": 204408.4736,
-        "1Q20": 302568.7722,
-        "1Q23": 414752.8,
-        "2Q19": 259684.371,
-        "1Q22": 360484.6,
-        "2Q24": 534922.6,
-        "2Q18": 215510.7714,
-        "4Q18": 237869.0723,
-        "4Q22": 416860.8,
-        "1Q25": 571258.6,
-        "4Q24": 652119.0,
-        "4Q25": 616506.6,
-        "3Q23": 364396.9,
-        "4Q23": 513514.8,
-        "3Q25": 592132.2,
-        "3Q24": 555694.6,
-        "3Q18": 275313.6705,
-        "1Q19": 237052.172,
-        "2Q22": 394861.4,
-        "3Q19": 272019.0744,
-        "2Q21": 338916.8572,
-        "1Q26": 614716.4,
-        "2Q23": 457283.7,
-        "2Q26": 638794.4,
-        "2Q20": 317939.2681,
-        "3Q20": 408769.4681,
-        "3Q26": 646398.8,
-        "2Q25": 584875.2,
-        "3Q21": 366821.8568
-      },
-      "Provisions": {
-        "4Q21": -39747.0,
-        "3Q22": -26009.8,
-        "4Q20": -25104.9,
-        "1Q21": -26925.2,
-        "4Q19": -14912.2,
-        "1Q18": -13951.3,
-        "1Q20": -17236.6,
-        "1Q23": -26737.3,
-        "2Q19": -14186.6,
-        "1Q22": -41448.4,
-        "2Q24": -29038.3,
-        "2Q18": -15378.2,
-        "4Q18": -12931.0,
-        "4Q22": -29113.5,
-        "1Q25": -26020.6,
-        "4Q24": -135116.4,
-        "4Q25": -31930.5,
-        "3Q23": -24364.4,
-        "4Q23": -22473.7,
-        "3Q25": -31538.5,
-        "3Q24": -42166.4,
-        "3Q18": 4135.6,
-        "1Q19": -16096.7,
-        "2Q22": -34726.6,
-        "3Q19": -20955.3,
-        "2Q21": -32675.0,
-        "1Q26": -37416.3,
-        "2Q23": -27671.3,
-        "2Q26": -35005.3,
-        "2Q20": -19469.0,
-        "3Q20": -485.6,
-        "3Q26": -28378.6,
-        "2Q25": -27004.6,
-        "3Q21": -28201.3
-      },
-      "PBT": {
-        "4Q21": 147629.458,
-        "3Q22": 178301.5,
-        "4Q20": 118667.7586,
-        "1Q21": 125445.8587,
-        "4Q19": 126452.7718,
-        "1Q18": 79835.3736,
-        "1Q20": 125186.9722,
-        "1Q23": 167699.3,
-        "2Q19": 111490.771,
-        "1Q22": 142107.6,
-        "2Q24": 197900.5,
-        "2Q18": 90564.1714,
-        "4Q18": 98965.6723,
-        "4Q22": 176671.5,
-        "1Q25": 212825.8,
-        "4Q24": 157626.0,
-        "4Q25": 233436.5,
-        "3Q23": 149179.9,
-        "4Q23": 213638.9,
-        "3Q25": 218465.5,
-        "3Q24": 194306.6,
-        "3Q18": 129504.8705,
-        "1Q19": 100883.872,
-        "2Q22": 165537.0,
-        "3Q19": 114356.9744,
-        "2Q21": 136420.6572,
-        "1Q26": 228623.3,
-        "2Q23": 195661.0,
-        "2Q26": 244230.7,
-        "2Q20": 135274.6681,
-        "3Q20": 190448.4681,
-        "3Q26": 242599.4,
-        "2Q25": 220052.8,
-        "3Q21": 155244.3568
-      }
-    },
-    "combined_yoy": {
-      "Loans": {
-        "1Q19": 0.210916,
-        "2Q19": 0.219186,
-        "3Q19": 0.202394,
-        "4Q19": 0.200626,
-        "1Q20": 0.150544,
-        "2Q20": 0.168553,
-        "3Q20": 0.176977,
-        "4Q20": 0.1783,
-        "1Q21": 0.178679,
-        "2Q21": 0.143333,
-        "3Q21": 0.137017,
-        "4Q21": 0.129121,
-        "1Q22": 0.121993,
-        "2Q22": 0.136206,
-        "3Q22": 0.14918,
-        "4Q22": 0.187617,
-        "1Q23": 0.198956,
-        "2Q23": 0.20676,
-        "3Q23": 0.171826,
-        "4Q23": 0.14657,
-        "1Q24": 0.183621,
-        "2Q24": 0.123409,
-        "3Q24": 0.159737,
-        "4Q24": 0.118756,
-        "1Q25": 0.053254,
-        "2Q25": 0.070301,
-        "3Q25": 0.029505,
-        "4Q25": 0.054227,
-        "1Q26": 0.066942,
-        "2Q26": 0.100692,
-        "3Q26": 0.1204
-      },
-      "TotalAssets": {
-        "1Q19": 0.264703,
-        "2Q19": 0.293503,
-        "3Q19": 0.28538,
-        "4Q19": 0.164392,
-        "1Q20": 0.161972,
-        "2Q20": 0.137136,
-        "3Q20": 0.174075,
-        "4Q20": 0.206237,
-        "1Q21": 0.20276,
-        "2Q21": 0.184391,
-        "3Q21": 0.167072,
-        "4Q21": 0.126479,
-        "1Q22": 0.111808,
-        "2Q22": 0.13405,
-        "3Q22": 0.156682,
-        "4Q22": 0.161582,
-        "1Q23": 0.181663,
-        "2Q23": 0.18094,
-        "3Q23": 0.158666,
-        "4Q23": 0.178483,
-        "1Q24": 0.231753,
-        "2Q24": 0.186068,
-        "3Q24": 0.176684,
-        "4Q24": 0.141823,
-        "1Q25": 0.054819,
-        "2Q25": 0.079546,
-        "3Q25": 0.076253,
-        "4Q25": 0.080875,
-        "1Q26": 0.108438,
-        "2Q26": 0.085395,
-        "3Q26": 0.087796
-      },
-      "Equity": {
-        "1Q19": 0.296312,
-        "2Q19": 0.521723,
-        "3Q19": 0.482675,
-        "4Q19": 0.321145,
-        "1Q20": 0.346768,
-        "2Q20": 0.141494,
-        "3Q20": 0.158373,
-        "4Q20": 0.136712,
-        "1Q21": 0.137463,
-        "2Q21": 0.205406,
-        "3Q21": 0.189788,
-        "4Q21": 0.215285,
-        "1Q22": 0.204802,
-        "2Q22": 0.154696,
-        "3Q22": 0.145457,
-        "4Q22": 0.153088,
-        "1Q23": 0.135359,
-        "2Q23": 0.14227,
-        "3Q23": -0.009609,
-        "4Q23": 0.149412,
-        "1Q24": 0.361835,
-        "2Q24": 0.072781,
-        "3Q24": 0.235791,
-        "4Q24": 0.062924,
-        "1Q25": -0.086304,
-        "2Q25": 0.144288,
-        "3Q25": 0.143787,
-        "4Q25": 0.138965,
-        "1Q26": 0.139438,
-        "2Q26": 0.127166,
-        "3Q26": 0.123047
-      },
-      "PAT": {
-        "1Q19": 0.276992,
-        "2Q19": 0.21921,
-        "3Q19": -0.22559,
-        "4Q19": 0.239615,
-        "1Q20": 0.291517,
-        "2Q20": 0.37916,
-        "3Q20": 1.050608,
-        "4Q20": 0.047277,
-        "1Q21": 0.10704,
-        "2Q21": 0.007474,
-        "3Q21": -0.259982,
-        "4Q21": 0.240825,
-        "1Q22": 0.105062,
-        "2Q22": 0.214921,
-        "3Q22": 0.16422,
-        "4Q22": 0.210207,
-        "1Q23": 0.198922,
-        "2Q23": 0.193836,
-        "3Q23": -0.16044,
-        "4Q23": 0.199735,
-        "2Q24": 0.060829,
-        "3Q24": 0.433617,
-        "4Q24": 0.000539,
-        "2Q25": 0.052883,
-        "3Q25": 0.022169,
-        "4Q25": 0.066879,
-        "1Q26": 0.0702,
-        "2Q26": 0.108217,
-        "3Q26": 0.114622
-      },
-      "NII": {
-        "1Q19": 0.163965,
-        "2Q19": 0.197281,
-        "3Q19": 0.211713,
-        "4Q19": 0.221181,
-        "1Q20": 0.205158,
-        "2Q20": 0.144042,
-        "3Q20": 0.124804,
-        "4Q20": 0.153607,
-        "1Q21": 0.163118,
-        "2Q21": 0.176976,
-        "3Q21": 0.168886,
-        "4Q21": 0.12804,
-        "1Q22": 0.112277,
-        "2Q22": 0.124604,
-        "3Q22": 0.118339,
-        "4Q22": 0.110012,
-        "1Q23": 0.132213,
-        "2Q23": 0.177408,
-        "3Q23": -0.038643,
-        "4Q23": 0.221513,
-        "2Q24": 0.067218,
-        "3Q24": 0.303095,
-        "4Q24": 0.014073,
-        "2Q25": 0.09964,
-        "3Q25": 0.076635,
-        "4Q25": 0.102796,
-        "1Q26": 0.053652,
-        "2Q26": 0.047739,
-        "3Q26": 0.063998
-      },
-      "TotalIncome": {
-        "1Q19": 0.182053,
-        "2Q19": 0.210109,
-        "3Q19": -0.067481,
-        "4Q19": 0.225312,
-        "1Q20": 0.290189,
-        "2Q20": 0.23889,
-        "3Q20": 0.602375,
-        "4Q20": 0.142676,
-        "1Q21": 0.06044,
-        "2Q21": 0.05795,
-        "3Q21": -0.141456,
-        "4Q21": 0.168221,
-        "1Q22": 0.140148,
-        "2Q22": 0.173101,
-        "3Q22": 0.101299,
-        "4Q22": 0.073417,
-        "1Q23": 0.109836,
-        "2Q23": 0.141679,
-        "3Q23": -0.085465,
-        "4Q23": 0.204162,
-        "2Q24": 0.085488,
-        "3Q24": 0.372903,
-        "4Q24": 0.224219,
-        "2Q25": 0.091974,
-        "3Q25": 0.063078,
-        "4Q25": -0.066664,
-        "1Q26": 0.087212,
-        "2Q26": 0.103491,
-        "3Q26": 0.089345
-      },
-      "Opex": {},
-      "PPOP": {
-        "1Q19": 0.159698,
-        "2Q19": 0.204972,
-        "3Q19": -0.011967,
-        "4Q19": 0.226166,
-        "1Q20": 0.276381,
-        "2Q20": 0.22433,
-        "3Q20": 0.502724,
-        "4Q20": 0.147915,
-        "1Q21": 0.039698,
-        "2Q21": 0.06598,
-        "3Q21": -0.102619,
-        "4Q21": 0.151052,
-        "1Q22": 0.145923,
-        "2Q22": 0.165069,
-        "3Q22": 0.115509,
-        "4Q22": 0.081681,
-        "1Q23": 0.150542,
-        "2Q23": 0.158087,
-        "3Q23": -0.109474,
-        "4Q23": 0.231862,
-        "2Q24": 0.169783,
-        "3Q24": 0.524971,
-        "4Q24": 0.269913,
-        "2Q25": 0.093383,
-        "3Q25": 0.065571,
-        "4Q25": -0.05461,
-        "1Q26": 0.076074,
-        "2Q26": 0.092189,
-        "3Q26": 0.091646
-      },
-      "PBT": {
-        "1Q19": 0.263649,
-        "2Q19": 0.231069,
-        "3Q19": -0.116968,
-        "4Q19": 0.277744,
-        "1Q20": 0.240902,
-        "2Q20": 0.213326,
-        "3Q20": 0.665386,
-        "4Q20": -0.061565,
-        "1Q21": 0.002068,
-        "2Q21": 0.008472,
-        "3Q21": -0.184848,
-        "4Q21": 0.244057,
-        "1Q22": 0.13282,
-        "2Q22": 0.213431,
-        "3Q22": 0.148522,
-        "4Q22": 0.196723,
-        "1Q23": 0.180087,
-        "2Q23": 0.181977,
-        "3Q23": -0.163328,
-        "4Q23": 0.209244,
-        "2Q24": 0.011446,
-        "3Q24": 0.302499,
-        "4Q24": -0.262185,
-        "2Q25": 0.111937,
-        "3Q25": 0.124334,
-        "4Q25": 0.480952,
-        "1Q26": 0.074227,
-        "2Q26": 0.109873,
-        "3Q26": 0.11047
-      }
-    },
-    "combined_metrics": {
-      "RoAA": {
-        "2Q18": 0.020288,
-        "3Q18": 0.031918,
-        "4Q18": 0.020751,
-        "1Q19": 0.018367,
-        "2Q19": 0.019333,
-        "3Q19": 0.01917,
-        "4Q19": 0.021079,
-        "1Q20": 0.020393,
-        "2Q20": 0.023203,
-        "3Q20": 0.034013,
-        "4Q20": 0.018542,
-        "1Q21": 0.018744,
-        "2Q21": 0.019588,
-        "3Q21": 0.021412,
-        "4Q21": 0.020076,
-        "1Q22": 0.018509,
-        "2Q22": 0.02119,
-        "3Q22": 0.021761,
-        "4Q22": 0.02096,
-        "1Q23": 0.01894,
-        "2Q23": 0.021415,
-        "3Q23": 0.015622,
-        "4Q23": 0.021515,
-        "2Q24": 0.0188,
-        "3Q24": 0.018958,
-        "4Q24": 0.018578,
-        "1Q25": 0.01801,
-        "2Q25": 0.018547,
-        "3Q25": 0.017978,
-        "4Q25": 0.018376,
-        "1Q26": 0.017609,
-        "2Q26": 0.018742,
-        "3Q26": 0.018442
-      },
-      "RoAE": {
-        "2Q18": 0.179337,
-        "3Q18": 0.269795,
-        "4Q18": 0.164832,
-        "1Q19": 0.154424,
-        "2Q19": 0.143685,
-        "3Q19": 0.140916,
-        "4Q19": 0.15466,
-        "1Q20": 0.148089,
-        "2Q20": 0.173601,
-        "3Q20": 0.249456,
-        "4Q20": 0.142492,
-        "1Q21": 0.144128,
-        "2Q21": 0.145095,
-        "3Q21": 0.155155,
-        "4Q21": 0.145486,
-        "1Q22": 0.132196,
-        "2Q22": 0.152663,
-        "3Q22": 0.157697,
-        "4Q22": 0.152693,
-        "1Q23": 0.139597,
-        "2Q23": 0.159555,
-        "3Q23": 0.13368,
-        "4Q23": 0.159378,
-        "2Q24": 0.157777,
-        "3Q24": 0.15508,
-        "4Q24": 0.150024,
-        "1Q25": 0.141054,
-        "2Q25": 0.145174,
-        "3Q25": 0.13859,
-        "4Q25": 0.140529,
-        "1Q26": 0.132483,
-        "2Q26": 0.142733,
-        "3Q26": 0.137551
-      },
-      "Leverage": {
-        "2Q18": 9.0306,
-        "3Q18": 8.5304,
-        "4Q18": 8.5432,
-        "1Q19": 8.5001,
-        "2Q19": 7.6762,
-        "3Q19": 7.3953,
-        "4Q19": 7.5296,
-        "1Q20": 7.3338,
-        "2Q20": 7.6469,
-        "3Q20": 7.4955,
-        "4Q20": 7.9901,
-        "1Q21": 7.7548,
-        "2Q21": 7.5136,
-        "3Q21": 7.3524,
-        "4Q21": 7.4062,
-        "1Q22": 7.1562,
-        "2Q22": 7.3793,
-        "3Q22": 7.4245,
-        "4Q22": 7.4608,
-        "1Q23": 7.4481,
-        "2Q23": 7.6291,
-        "3Q23": 8.686,
-        "4Q23": 7.6495,
-        "1Q24": 6.7367,
-        "2Q24": 8.4347,
-        "3Q24": 8.2705,
-        "4Q24": 8.2173,
-        "1Q25": 7.7772,
-        "2Q25": 7.9575,
-        "3Q25": 7.7822,
-        "4Q25": 7.7982,
-        "1Q26": 7.5656,
-        "2Q26": 7.6626,
-        "3Q26": 7.5379
-      },
-      "NIM": {
-        "2Q18": 0.039789,
-        "3Q18": 0.040951,
-        "4Q18": 0.039135,
-        "1Q19": 0.036658,
-        "2Q19": 0.037235,
-        "3Q19": 0.038483,
-        "4Q19": 0.039162,
-        "1Q20": 0.037982,
-        "2Q20": 0.037069,
-        "3Q20": 0.037454,
-        "4Q20": 0.037946,
-        "1Q21": 0.036677,
-        "2Q21": 0.03656,
-        "3Q21": 0.037242,
-        "4Q21": 0.037353,
-        "1Q22": 0.036454,
-        "2Q22": 0.036609,
-        "3Q22": 0.036358,
-        "4Q22": 0.035768,
-        "1Q23": 0.035227,
-        "2Q23": 0.036489,
-        "3Q23": 0.029886,
-        "4Q23": 0.037381,
-        "2Q24": 0.032227,
-        "3Q24": 0.032967,
-        "4Q24": 0.032715,
-        "1Q25": 0.033222,
-        "2Q25": 0.033205,
-        "3Q25": 0.032929,
-        "4Q25": 0.033449,
-        "1Q26": 0.031981,
-        "2Q26": 0.031722,
-        "3Q26": 0.032244
-      },
-      "CostIncome": {
-        "2Q18": -0.304516,
-        "3Q18": -0.23302,
-        "4Q18": -0.303189,
-        "1Q19": -0.300274,
-        "2Q19": -0.298978,
-        "3Q19": -0.306424,
-        "4Q19": -0.304097,
-        "1Q20": -0.286358,
-        "2Q20": -0.283712,
-        "3Q20": -0.225178,
-        "4Q20": -0.310075,
-        "1Q21": -0.261198,
-        "2Q21": -0.293456,
-        "3Q21": -0.2806,
-        "4Q21": -0.290822,
-        "1Q22": -0.267586,
-        "2Q22": -0.284599,
-        "3Q22": -0.297123,
-        "4Q22": -0.30076,
-        "1Q23": -0.314078,
-        "2Q23": -0.303061,
-        "3Q23": -0.26307,
-        "4Q23": -0.330681,
-        "2Q24": -0.404252,
-        "3Q24": -0.402972,
-        "4Q24": -0.380348,
-        "1Q25": -0.410332,
-        "2Q25": -0.406064,
-        "3Q25": -0.406262,
-        "4Q25": -0.398175,
-        "1Q26": -0.395884,
-        "2Q26": -0.391663,
-        "3Q26": -0.409233
-      },
-      "CreditCost": {
-        "2Q18": -0.00662,
-        "3Q18": 0.001699,
-        "4Q18": -0.005065,
-        "1Q19": -0.005944,
-        "2Q19": -0.005009,
-        "3Q19": -0.007162,
-        "4Q19": -0.004865,
-        "1Q20": -0.005532,
-        "2Q20": -0.005883,
-        "3Q20": -0.000141,
-        "4Q20": -0.006951,
-        "1Q21": -0.007332,
-        "2Q21": -0.008636,
-        "3Q21": -0.007202,
-        "4Q21": -0.009747,
-        "1Q22": -0.010059,
-        "2Q22": -0.008078,
-        "3Q22": -0.00578,
-        "4Q22": -0.006012,
-        "1Q23": -0.005412,
-        "2Q23": -0.005334,
-        "3Q23": -0.004621,
-        "4Q23": -0.004047,
-        "2Q24": -0.004982,
-        "3Q24": -0.006895,
-        "4Q24": -0.02175,
-        "1Q25": -0.004225,
-        "2Q25": -0.004329,
-        "3Q25": -0.00501,
-        "4Q25": -0.004876,
-        "1Q26": -0.005694,
-        "2Q26": -0.005098,
-        "3Q26": -0.004023
-      }
-    },
-    "combined_periods": [
-      "1Q18",
-      "2Q18",
-      "3Q18",
-      "4Q18",
-      "1Q19",
-      "2Q19",
-      "3Q19",
-      "4Q19",
-      "1Q20",
-      "2Q20",
-      "3Q20",
-      "4Q20",
-      "1Q21",
-      "2Q21",
-      "3Q21",
-      "4Q21",
-      "1Q22",
-      "2Q22",
-      "3Q22",
-      "4Q22",
-      "1Q23",
-      "2Q23",
-      "3Q23",
-      "4Q23",
-      "1Q24",
-      "2Q24",
-      "3Q24",
-      "4Q24",
-      "1Q25",
-      "2Q25",
-      "3Q25",
-      "4Q25",
-      "1Q26",
-      "2Q26",
-      "3Q26"
-    ]
-  },
-  "hdfcltd": {
-    "absolute": {
-      "OperatingIncome": {
-        "1Q18": 82856.5,
-        "2Q18": 90032.1,
-        "3Q18": 140833.4,
-        "4Q18": 93170.2,
-        "1Q19": 99473.5,
-        "2Q19": 112456.1,
-        "3Q19": 105750.3,
-        "4Q19": 115800.5,
-        "1Q20": 129902.9,
-        "2Q20": 134874.4,
-        "3Q20": 202854.7,
-        "4Q20": 119757.2,
-        "1Q21": 130176.8,
-        "2Q21": 117279.6,
-        "3Q21": 117070.0,
-        "4Q21": 116971.0,
-        "1Q22": 116574.7,
-        "2Q22": 122159.5,
-        "3Q22": 117836.6,
-        "4Q22": 122999.9,
-        "1Q23": 132403.1,
-        "2Q23": 150272.1,
-        "3Q23": 152301.2,
-        "4Q23": 166794.3
-      },
-      "InterestIncome": {
-        "1Q18": 80291.7,
-        "2Q18": 81136.4,
-        "3Q18": 83848.7,
-        "4Q18": 86054.0,
-        "1Q19": 90942.2,
-        "2Q19": 96733.1,
-        "3Q19": 101388.5,
-        "4Q19": 103429.7,
-        "1Q20": 107810.7,
-        "2Q20": 107809.3,
-        "3Q20": 109827.3,
-        "4Q20": 112046.0,
-        "1Q21": 111523.9,
-        "2Q21": 110019.5,
-        "3Q21": 108373.9,
-        "4Q21": 105930.1,
-        "1Q22": 106470.7,
-        "2Q22": 106830.5,
-        "3Q22": 111568.5,
-        "4Q22": 113716.4,
-        "1Q23": 120030.2,
-        "2Q23": 131989.3,
-        "3Q23": 145342.4,
-        "4Q23": 155062.3
-      },
-      "InterestExpense": {
-        "1Q18": 57542.8,
-        "2Q18": 58449.8,
-        "3Q18": 59429.0,
-        "4Q18": 59558.2,
-        "1Q19": 63526.8,
-        "2Q19": 70445.3,
-        "3Q19": 72586.1,
-        "4Q19": 71818.5,
-        "1Q20": 77392.7,
-        "2Q20": 78307.0,
-        "3Q20": 77695.5,
-        "4Q20": 76618.4,
-        "1Q21": 78170.5,
-        "2Q21": 73991.1,
-        "3Q21": 68326.5,
-        "4Q21": 65659.5,
-        "1Q22": 65219.2,
-        "2Q22": 65734.7,
-        "3Q22": 68730.5,
-        "4Q22": 67707.7,
-        "1Q23": 75561.2,
-        "2Q23": 85596.9,
-        "3Q23": 96941.8,
-        "4Q23": 101847.5
-      },
-      "NII": {
-        "1Q18": 22748.9,
-        "2Q18": 22686.6,
-        "3Q18": 24419.7,
-        "4Q18": 26495.8,
-        "1Q19": 27415.4,
-        "2Q19": 26287.8,
-        "3Q19": 28802.4,
-        "4Q19": 31611.2,
-        "1Q20": 30418.0,
-        "2Q20": 29502.3,
-        "3Q20": 32131.8,
-        "4Q20": 35427.6,
-        "1Q21": 33353.4,
-        "2Q21": 36028.4,
-        "3Q21": 40047.4,
-        "4Q21": 40270.6,
-        "1Q22": 41251.5,
-        "2Q22": 41095.8,
-        "3Q22": 42838.0,
-        "4Q22": 46008.7,
-        "1Q23": 44469.0,
-        "2Q23": 46392.4,
-        "3Q23": 48400.6,
-        "4Q23": 53214.8
-      },
-      "NetOpIncome": {
-        "1Q18": 25313.7,
-        "2Q18": 31582.3,
-        "3Q18": 81404.4,
-        "4Q18": 33612.0,
-        "1Q19": 35946.7,
-        "2Q19": 42010.8,
-        "3Q19": 33164.2,
-        "4Q19": 43982.0,
-        "1Q20": 52510.2,
-        "2Q20": 56567.4,
-        "3Q20": 125159.2,
-        "4Q20": 43138.8,
-        "1Q21": 52006.3,
-        "2Q21": 43288.5,
-        "3Q21": 48743.5,
-        "4Q21": 51311.5,
-        "1Q22": 51355.5,
-        "2Q22": 56424.8,
-        "3Q22": 49106.1,
-        "4Q22": 55292.2,
-        "1Q23": 56841.9,
-        "2Q23": 64675.2,
-        "3Q23": 55359.4,
-        "4Q23": 64946.8
-      },
-      "OtherIncome": {
-        "1Q18": 43.3,
-        "2Q18": 41.6,
-        "3Q18": 44.4,
-        "4Q18": 53.4,
-        "1Q19": 46.3,
-        "2Q19": 113.5,
-        "3Q19": 74.6,
-        "4Q19": 65.3,
-        "1Q20": 58.2,
-        "2Q20": 66.8,
-        "3Q20": 59.8,
-        "4Q20": 59.4,
-        "1Q21": 16.1,
-        "2Q21": 47.4,
-        "3Q21": 93.4,
-        "4Q21": 104.3,
-        "1Q22": 56.7,
-        "2Q22": 104.4,
-        "3Q22": 85.5,
-        "4Q22": 84.7,
-        "1Q23": 84.2,
-        "2Q23": 87.8,
-        "3Q23": 166.9,
-        "4Q23": 126.9
-      },
-      "TotalIncome": {
-        "1Q18": 25357.0,
-        "2Q18": 31623.9,
-        "3Q18": 81448.8,
-        "4Q18": 33665.4,
-        "1Q19": 35993.0,
-        "2Q19": 42124.3,
-        "3Q19": 33238.8,
-        "4Q19": 44047.3,
-        "1Q20": 52568.4,
-        "2Q20": 56634.2,
-        "3Q20": 125219.0,
-        "4Q20": 43198.2,
-        "1Q21": 52022.4,
-        "2Q21": 43335.9,
-        "3Q21": 48836.9,
-        "4Q21": 51415.8,
-        "1Q22": 51412.2,
-        "2Q22": 56529.2,
-        "3Q22": 49191.6,
-        "4Q22": 55376.9,
-        "1Q23": 56926.1,
-        "2Q23": 64763.0,
-        "3Q23": 55526.3,
-        "4Q23": 65073.7
-      },
-      "Opex": {
-        "1Q18": 3497.2,
-        "2Q18": 5093.4,
-        "3Q18": 5292.5,
-        "4Q18": 5165.6,
-        "1Q19": 5096.0,
-        "2Q19": 3220.5,
-        "3Q19": 3390.8,
-        "4Q19": 3158.4,
-        "1Q20": 3817.3,
-        "2Q20": 3789.4,
-        "3Q20": 3839.1,
-        "4Q20": 3533.8,
-        "1Q21": 3964.1,
-        "2Q21": 3658.1,
-        "3Q21": 5371.5,
-        "4Q21": 4986.4,
-        "1Q22": 5506.5,
-        "2Q22": 5298.5,
-        "3Q22": 4779.8,
-        "4Q22": 5142.0,
-        "1Q23": 5887.9,
-        "2Q23": 5892.4,
-        "3Q23": 5708.3,
-        "4Q23": 6710.1
-      },
-      "PPOP": {
-        "1Q18": 21859.8,
-        "2Q18": 26530.5,
-        "3Q18": 76156.3,
-        "4Q18": 28499.8,
-        "1Q19": 30897.0,
-        "2Q19": 38903.8,
-        "3Q19": 29848.0,
-        "4Q19": 40888.9,
-        "1Q20": 48751.1,
-        "2Q20": 52844.8,
-        "3Q20": 121379.9,
-        "4Q20": 39664.4,
-        "1Q21": 48058.3,
-        "2Q21": 39677.8,
-        "3Q21": 43465.4,
-        "4Q21": 46429.4,
-        "1Q22": 45905.7,
-        "2Q22": 51230.7,
-        "3Q22": 44411.8,
-        "4Q22": 50234.9,
-        "1Q23": 51038.2,
-        "2Q23": 58870.6,
-        "3Q23": 49818.0,
-        "4Q23": 58363.6
-      },
-      "Provisions": {
-        "1Q18": 1636.3,
-        "2Q18": -616.3,
-        "3Q18": 17650.0,
-        "4Q18": 2480.0,
-        "1Q19": 197.0,
-        "2Q19": 4013.0,
-        "3Q19": 1160.0,
-        "4Q19": 3980.0,
-        "1Q20": 8900.0,
-        "2Q20": 7541.0,
-        "3Q20": 29950.0,
-        "4Q20": 12740.0,
-        "1Q21": 11990.0,
-        "2Q21": 4360.0,
-        "3Q21": 5940.0,
-        "4Q21": 7190.0,
-        "1Q22": 6860.0,
-        "2Q22": 4520.0,
-        "3Q22": 3930.0,
-        "4Q22": 4010.0,
-        "1Q23": 5140.0,
-        "2Q23": 4730.0,
-        "3Q23": 3700.0,
-        "4Q23": 4380.0
-      },
-      "PBT": {
-        "1Q18": 20223.5,
-        "2Q18": 27146.8,
-        "3Q18": 58506.3,
-        "4Q18": 26019.8,
-        "1Q19": 30700.0,
-        "2Q19": 34890.8,
-        "3Q19": 28688.0,
-        "4Q19": 36908.9,
-        "1Q20": 39851.1,
-        "2Q20": 45303.8,
-        "3Q20": 91429.9,
-        "4Q20": 26924.4,
-        "1Q21": 36068.3,
-        "2Q21": 35317.8,
-        "3Q21": 37525.4,
-        "4Q21": 39239.4,
-        "1Q22": 39045.7,
-        "2Q22": 46710.7,
-        "3Q22": 40481.8,
-        "4Q22": 46224.9,
-        "1Q23": 45898.2,
-        "2Q23": 54140.6,
-        "3Q23": 46118.0,
-        "4Q23": 53983.6
-      },
-      "Tax": {
-        "1Q18": 5978.8,
-        "2Q18": 7364.9,
-        "3Q18": 5506.3,
-        "4Q18": 3453.0,
-        "1Q19": 8800.0,
-        "2Q19": 10220.0,
-        "3Q19": 7550.0,
-        "4Q19": 8293.1,
-        "1Q20": 7820.1,
-        "2Q20": 5688.5,
-        "3Q20": 7705.0,
-        "4Q20": 4599.1,
-        "1Q21": 5553.1,
-        "2Q21": 6616.6,
-        "3Q21": 8267.1,
-        "4Q21": 7441.1,
-        "1Q22": 9039.0,
-        "2Q22": 8905.7,
-        "3Q22": 7874.9,
-        "4Q22": 9221.7,
-        "1Q23": 9210.0,
-        "2Q23": 9598.2,
-        "3Q23": 9210.0,
-        "4Q23": 9728.6
-      },
-      "PAT": {
-        "1Q18": 14244.7,
-        "2Q18": 19781.9,
-        "3Q18": 53000.0,
-        "4Q18": 22566.8,
-        "1Q19": 21900.0,
-        "2Q19": 24670.8,
-        "3Q19": 21138.0,
-        "4Q19": 28615.8,
-        "1Q20": 32031.0,
-        "2Q20": 39615.3,
-        "3Q20": 83724.9,
-        "4Q20": 22325.3,
-        "1Q21": 30515.2,
-        "2Q21": 28701.2,
-        "3Q21": 29258.3,
-        "4Q21": 31798.3,
-        "1Q22": 30006.7,
-        "2Q22": 37805.0,
-        "3Q22": 32606.9,
-        "4Q22": 37003.2,
-        "1Q23": 36688.2,
-        "2Q23": 44542.4,
-        "3Q23": 36908.0,
-        "4Q23": 44255.0
-      },
-      "LoansOnBS": {
-        "1Q18": 3135730.0,
-        "2Q18": 3242680.0,
-        "3Q18": 3421540.0,
-        "4Q18": 3628110.0,
-        "1Q19": 3745750.0,
-        "2Q19": 3819500.0,
-        "3Q19": 3894210.0,
-        "4Q19": 4066070.0,
-        "1Q20": 4165670.0,
-        "2Q20": 4267390.0,
-        "3Q20": 4414720.0,
-        "4Q20": 4509030.0,
-        "1Q21": 4656850.0,
-        "2Q21": 4751210.0,
-        "3Q21": 4839190.0,
-        "4Q21": 4982980.0,
-        "1Q22": 5004900.0,
-        "2Q22": 5207977.5,
-        "3Q22": 5389944.7,
-        "4Q22": 5683630.0,
-        "1Q23": 5810400.0,
-        "2Q23": 5952690.0,
-        "3Q23": 6023545.4,
-        "4Q23": 6205070.0
-      },
-      "LoansOffBS": {
-        "1Q18": 441303.8983,
-        "2Q18": 434350.0,
-        "3Q18": 420770.0,
-        "4Q18": 400690.0,
-        "1Q19": 475150.0,
-        "2Q19": 511190.0,
-        "3Q19": 555020.0,
-        "4Q19": 553060.0,
-        "1Q20": 593660.0,
-        "2Q20": 633330.0,
-        "3Q20": 639290.0,
-        "4Q20": 658700.0,
-        "1Q21": 655010.0,
-        "2Q21": 651490.0,
-        "3Q21": 682480.0,
-        "4Q21": 715960.0,
-        "1Q22": 736460.0,
-        "2Q22": 765412.5,
-        "3Q22": 799230.0,
-        "4Q22": 855390.0,
-        "1Q23": 903240.0,
-        "2Q23": 950160.0,
-        "3Q23": 991300.0,
-        "4Q23": 1034810.0
-      },
-      "LoansUM": {
-        "1Q18": 3577033.8983,
-        "2Q18": 3677030.0,
-        "3Q18": 3842310.0,
-        "4Q18": 4028800.0,
-        "1Q19": 4220900.0,
-        "2Q19": 4330690.0,
-        "3Q19": 4449230.0,
-        "4Q19": 4619130.0,
-        "1Q20": 4759330.0,
-        "2Q20": 4900720.0,
-        "3Q20": 5054010.0,
-        "4Q20": 5167730.0,
-        "1Q21": 5311860.0,
-        "2Q21": 5402700.0,
-        "3Q21": 5521670.0,
-        "4Q21": 5698940.0,
-        "1Q22": 5741360.0,
-        "2Q22": 5973390.0,
-        "3Q22": 6189174.7,
-        "4Q22": 6539020.0,
-        "1Q23": 6713640.0,
-        "2Q23": 6902850.0,
-        "3Q23": 7014845.4,
-        "4Q23": 7239880.0
-      },
-      "Sharecapital": {
-        "1Q18": 3185.8,
-        "2Q18": 3190.2,
-        "3Q18": 3195.2,
-        "4Q18": 3351.8,
-        "1Q19": 3367.3,
-        "2Q19": 3393.2,
-        "3Q19": 3438.9,
-        "4Q19": 3442.9,
-        "1Q20": 3450.0,
-        "2Q20": 3453.4,
-        "3Q20": 3453.4,
-        "4Q20": 3464.1,
-        "1Q21": 3469.2,
-        "2Q21": 3591.6,
-        "3Q21": 3600.0,
-        "4Q21": 3607.9,
-        "1Q22": 3607.9,
-        "2Q22": 3607.9,
-        "3Q22": 3620.0,
-        "4Q22": 3626.1,
-        "1Q23": 3626.1,
-        "2Q23": 3626.1,
-        "3Q23": 3626.1,
-        "4Q23": 3669.1
-      },
-      "Reserves": {
-        "4Q18": 645945.5,
-        "1Q19": 679100.0,
-        "2Q19": 704617.2,
-        "3Q19": 752491.1,
-        "4Q19": 766668.9,
-        "1Q20": 809360.0,
-        "2Q20": 813602.0,
-        "3Q20": 892386.6,
-        "4Q20": 858116.5,
-        "1Q21": 911850.0,
-        "2Q21": 997742.9,
-        "3Q21": 1057200.0,
-        "4Q21": 1084218.6,
-        "1Q22": 1118292.1,
-        "2Q22": 1114560.3,
-        "3Q22": 1150380.0,
-        "4Q22": 1198883.9,
-        "1Q23": 1179783.9,
-        "2Q23": 1230771.2,
-        "3Q23": 1288736.5,
-        "4Q23": 1336178.3,
-        "1Q18": 411292.7,
-        "2Q18": 404467.5,
-        "3Q18": 460275.0
-      },
-      "TotalAssets": {
-        "1Q18": 2866935.8,
-        "2Q18": 3009240.2,
-        "3Q18": 3083875.2,
-        "4Q18": 3989095.9,
-        "1Q19": 4149080.0,
-        "2Q19": 4270112.4,
-        "3Q19": 4477660.0,
-        "4Q19": 4587775.5,
-        "1Q20": 4722640.0,
-        "2Q20": 4908313.7,
-        "3Q20": 5023480.0,
-        "4Q20": 5240935.6,
-        "1Q21": 5447130.0,
-        "2Q21": 5413120.9,
-        "3Q21": 5605060.0,
-        "4Q21": 5675985.8,
-        "1Q22": 5694860.0,
-        "2Q22": 5942397.7,
-        "3Q22": 6234200.3,
-        "4Q22": 6199320.0,
-        "1Q23": 6357930.0,
-        "2Q23": 6524737.3,
-        "3Q23": 6729002.6,
-        "4Q23": 7022067.4
-      },
-      "TotalBorrowings": {
-        "1Q18": 2863750.0,
-        "2Q18": 3006050.0,
-        "3Q18": 3080680.0,
-        "4Q18": 3197160.0,
-        "1Q19": 3325260.0,
-        "2Q19": 3406220.0,
-        "3Q19": 3547280.0,
-        "4Q19": 3652660.0,
-        "1Q20": 3736290.0,
-        "2Q20": 3889760.0,
-        "3Q20": 3951280.0,
-        "4Q20": 4191020.0,
-        "1Q21": 4320590.0,
-        "2Q21": 4208990.0,
-        "3Q21": 4339170.0,
-        "4Q21": 4413650.4,
-        "1Q22": 4384130.0,
-        "2Q22": 4627370.0,
-        "3Q22": 4890022.3,
-        "4Q22": 4996810.0,
-        "1Q23": 5174520.0,
-        "2Q23": 5290340.0,
-        "3Q23": 5436640.0,
-        "4Q23": 5682220.0
-      },
-      "Equity": {
-        "1Q18": 414478.5,
-        "2Q18": 407657.7,
-        "3Q18": 463470.2,
-        "4Q18": 649297.3,
-        "1Q19": 682467.3,
-        "2Q19": 708010.4,
-        "3Q19": 755930.0,
-        "4Q19": 770111.8,
-        "1Q20": 812810.0,
-        "2Q20": 817055.4,
-        "3Q20": 895840.0,
-        "4Q20": 861580.6,
-        "1Q21": 915319.2,
-        "2Q21": 1001334.5,
-        "3Q21": 1060800.0,
-        "4Q21": 1087826.5,
-        "1Q22": 1121900.0,
-        "2Q22": 1118168.2,
-        "3Q22": 1154000.0,
-        "4Q22": 1202510.0,
-        "1Q23": 1183410.0,
-        "2Q23": 1234397.3,
-        "3Q23": 1292362.6,
-        "4Q23": 1339847.4
-      }
-    },
-    "yoy": {
-      "LoansOnBS": {
-        "1Q19": 0.194538,
-        "2Q19": 0.177884,
-        "3Q19": 0.138145,
-        "4Q19": 0.120713,
-        "1Q20": 0.112106,
-        "2Q20": 0.117264,
-        "3Q20": 0.133663,
-        "4Q20": 0.108941,
-        "1Q21": 0.117911,
-        "2Q21": 0.113376,
-        "3Q21": 0.096149,
-        "4Q21": 0.105111,
-        "1Q22": 0.074739,
-        "2Q22": 0.096137,
-        "3Q22": 0.113811,
-        "4Q22": 0.140609,
-        "1Q23": 0.160942,
-        "2Q23": 0.142995,
-        "3Q23": 0.117552,
-        "4Q23": 0.091744
-      },
-      "TotalAssets": {
-        "1Q19": 0.447218,
-        "2Q19": 0.419,
-        "3Q19": 0.451959,
-        "4Q19": 0.150079,
-        "1Q20": 0.138238,
-        "2Q20": 0.149458,
-        "3Q20": 0.121898,
-        "4Q20": 0.14237,
-        "1Q21": 0.153408,
-        "2Q21": 0.102847,
-        "3Q21": 0.115772,
-        "4Q21": 0.08301,
-        "1Q22": 0.045479,
-        "2Q22": 0.097777,
-        "3Q22": 0.112245,
-        "4Q22": 0.092201,
-        "1Q23": 0.116433,
-        "2Q23": 0.097997,
-        "3Q23": 0.079369,
-        "4Q23": 0.132716
-      },
-      "Equity": {
-        "1Q19": 0.646569,
-        "2Q19": 0.736777,
-        "3Q19": 0.631022,
-        "4Q19": 0.18607,
-        "1Q20": 0.190987,
-        "2Q20": 0.154016,
-        "3Q20": 0.185083,
-        "4Q20": 0.118773,
-        "1Q21": 0.126117,
-        "2Q21": 0.225541,
-        "3Q21": 0.18414,
-        "4Q21": 0.262594,
-        "1Q22": 0.225693,
-        "2Q22": 0.116678,
-        "3Q22": 0.087858,
-        "4Q22": 0.105424,
-        "1Q23": 0.054827,
-        "2Q23": 0.103946,
-        "3Q23": 0.119898,
-        "4Q23": 0.114209
-      },
-      "PAT": {
-        "1Q19": 0.537414,
-        "2Q19": 0.24714,
-        "3Q19": -0.60117,
-        "4Q19": 0.268049,
-        "1Q20": 0.462603,
-        "2Q20": 0.605757,
-        "3Q20": 2.960871,
-        "4Q20": -0.219826,
-        "1Q21": -0.047323,
-        "2Q21": -0.275502,
-        "3Q21": -0.650542,
-        "4Q21": 0.424317,
-        "1Q22": -0.016664,
-        "2Q22": 0.317192,
-        "3Q22": 0.11445,
-        "4Q22": 0.163685,
-        "1Q23": 0.222667,
-        "2Q23": 0.178215,
-        "3Q23": 0.131908,
-        "4Q23": 0.195978
-      },
-      "NII": {
-        "1Q19": 0.205131,
-        "2Q19": 0.158737,
-        "3Q19": 0.179474,
-        "4Q19": 0.193065,
-        "1Q20": 0.109522,
-        "2Q20": 0.122281,
-        "3Q20": 0.115595,
-        "4Q20": 0.120729,
-        "1Q21": 0.096502,
-        "2Q21": 0.221206,
-        "3Q21": 0.246348,
-        "4Q21": 0.136701,
-        "1Q22": 0.2368,
-        "2Q22": 0.14065,
-        "3Q22": 0.069682,
-        "4Q22": 0.142489,
-        "1Q23": 0.077997,
-        "2Q23": 0.128884,
-        "3Q23": 0.129852,
-        "4Q23": 0.156625
-      },
-      "PPOP": {
-        "1Q19": 0.413416,
-        "2Q19": 0.46638,
-        "3Q19": -0.608069,
-        "4Q19": 0.434708,
-        "1Q20": 0.577859,
-        "2Q20": 0.358345,
-        "3Q20": 3.066601,
-        "4Q20": -0.029947,
-        "1Q21": -0.014211,
-        "2Q21": -0.249164,
-        "3Q21": -0.641906,
-        "4Q21": 0.170556,
-        "1Q22": -0.044791,
-        "2Q22": 0.291168,
-        "3Q22": 0.021774,
-        "4Q22": 0.081963,
-        "1Q23": 0.111805,
-        "2Q23": 0.149127,
-        "3Q23": 0.121729,
-        "4Q23": 0.161814
-      },
-      "Opex": {
-        "1Q19": 0.457166,
-        "2Q19": -0.367711,
-        "3Q19": -0.35932,
-        "4Q19": -0.388571,
-        "1Q20": -0.250922,
-        "2Q20": 0.17665,
-        "3Q20": 0.132211,
-        "4Q20": 0.118858,
-        "1Q21": 0.038457,
-        "2Q21": -0.034649,
-        "3Q21": 0.399156,
-        "4Q21": 0.411059,
-        "1Q22": 0.389092,
-        "2Q22": 0.44843,
-        "3Q22": -0.110155,
-        "4Q22": 0.031205,
-        "1Q23": 0.069264,
-        "2Q23": 0.112088,
-        "3Q23": 0.194255,
-        "4Q23": 0.304959
-      }
-    },
-    "metrics": {
-      "RoAA": {
-        "2Q18": 0.026932,
-        "3Q18": 0.069587,
-        "4Q18": 0.025525,
-        "1Q19": 0.021528,
-        "2Q19": 0.023442,
-        "3Q19": 0.019331,
-        "4Q19": 0.025253,
-        "1Q20": 0.027523,
-        "2Q20": 0.032907,
-        "3Q20": 0.06744,
-        "4Q20": 0.0174,
-        "1Q21": 0.022841,
-        "2Q21": 0.021142,
-        "3Q21": 0.021244,
-        "4Q21": 0.02255,
-        "1Q22": 0.021111,
-        "2Q22": 0.025989,
-        "3Q22": 0.021423,
-        "4Q22": 0.023809,
-        "1Q23": 0.023373,
-        "2Q23": 0.02766,
-        "3Q23": 0.022278,
-        "4Q23": 0.025746
-      },
-      "RoAE": {
-        "2Q18": 0.194103,
-        "3Q18": 0.457419,
-        "4Q18": 0.139023,
-        "1Q19": 0.128358,
-        "2Q19": 0.139381,
-        "3Q19": 0.111852,
-        "4Q19": 0.148632,
-        "1Q20": 0.157631,
-        "2Q20": 0.193942,
-        "3Q20": 0.373839,
-        "4Q20": 0.103648,
-        "1Q21": 0.133353,
-        "2Q21": 0.114652,
-        "3Q21": 0.110325,
-        "4Q21": 0.116924,
-        "1Q22": 0.106985,
-        "2Q22": 0.135239,
-        "3Q22": 0.113022,
-        "4Q22": 0.123087,
-        "1Q23": 0.124008,
-        "2Q23": 0.144337,
-        "3Q23": 0.114234,
-        "4Q23": 0.13212
-      },
-      "Leverage": {
-        "2Q18": 7.3818,
-        "3Q18": 6.6539,
-        "4Q18": 6.1437,
-        "1Q19": 6.0795,
-        "2Q19": 6.0311,
-        "3Q19": 5.9234,
-        "4Q19": 5.9573,
-        "1Q20": 5.8103,
-        "2Q20": 6.0073,
-        "3Q20": 5.6076,
-        "4Q20": 6.0829,
-        "1Q21": 5.9511,
-        "2Q21": 5.4059,
-        "3Q21": 5.2838,
-        "4Q21": 5.2177,
-        "1Q22": 5.0761,
-        "2Q22": 5.3144,
-        "3Q22": 5.4023,
-        "4Q22": 5.1553,
-        "1Q23": 5.3726,
-        "2Q23": 5.2858,
-        "3Q23": 5.2067,
-        "4Q23": 5.2409
-      },
-      "NIM": {
-        "2Q18": 0.030886,
-        "3Q18": 0.032062,
-        "4Q18": 0.029969,
-        "1Q19": 0.02695,
-        "2Q19": 0.024979,
-        "3Q19": 0.02634,
-        "4Q19": 0.027896,
-        "1Q20": 0.026137,
-        "2Q20": 0.024506,
-        "3Q20": 0.025882,
-        "4Q20": 0.027612,
-        "1Q21": 0.024965,
-        "2Q21": 0.02654,
-        "3Q21": 0.029077,
-        "4Q21": 0.028558,
-        "1Q22": 0.029023,
-        "2Q22": 0.028251,
-        "3Q22": 0.028144,
-        "4Q22": 0.029603,
-        "1Q23": 0.02833,
-        "2Q23": 0.028809,
-        "3Q23": 0.029215,
-        "4Q23": 0.030959
-      },
-      "CostIncome": {
-        "2Q18": 0.161062,
-        "3Q18": 0.064979,
-        "4Q18": 0.153439,
-        "1Q19": 0.141583,
-        "2Q19": 0.076452,
-        "3Q19": 0.102013,
-        "4Q19": 0.071705,
-        "1Q20": 0.072616,
-        "2Q20": 0.06691,
-        "3Q20": 0.030659,
-        "4Q20": 0.081804,
-        "1Q21": 0.0762,
-        "2Q21": 0.084413,
-        "3Q21": 0.109989,
-        "4Q21": 0.096982,
-        "1Q22": 0.107105,
-        "2Q22": 0.09373,
-        "3Q22": 0.097167,
-        "4Q22": 0.092855,
-        "1Q23": 0.103431,
-        "2Q23": 0.090984,
-        "3Q23": 0.102804,
-        "4Q23": 0.103115
-      },
-      "LoanGrowthYoY": {
-        "1Q19": 0.194538,
-        "2Q19": 0.177884,
-        "3Q19": 0.138145,
-        "4Q19": 0.120713,
-        "1Q20": 0.112106,
-        "2Q20": 0.117264,
-        "3Q20": 0.133663,
-        "4Q20": 0.108941,
-        "1Q21": 0.117911,
-        "2Q21": 0.113376,
-        "3Q21": 0.096149,
-        "4Q21": 0.105111,
-        "1Q22": 0.074739,
-        "2Q22": 0.096137,
-        "3Q22": 0.113811,
-        "4Q22": 0.140609,
-        "1Q23": 0.160942,
-        "2Q23": 0.142995,
-        "3Q23": 0.117552,
-        "4Q23": 0.091744
-      }
-    },
-    "periods": [
-      "1Q18",
-      "2Q18",
-      "3Q18",
-      "4Q18",
-      "1Q19",
-      "2Q19",
-      "3Q19",
-      "4Q19",
-      "1Q20",
-      "2Q20",
-      "3Q20",
-      "4Q20",
-      "1Q21",
-      "2Q21",
-      "3Q21",
-      "4Q21",
-      "1Q22",
-      "2Q22",
-      "3Q22",
-      "4Q22",
-      "1Q23",
-      "2Q23",
-      "3Q23",
-      "4Q23"
-    ]
-  },
   "scenarioData": {
     "base": {
       "metrics": {
@@ -10559,4 +9070,590 @@ const DATA = {
       }
     }
   }
-};
+};</script>
+<script>
+// ---- CONFIG ----
+const ACT_A = 'FY25', ACT_Q = '3Q26';
+const MRG_A = ['FY24']; // Annual merger-impacted
+const MRG_Q_DUPONT = ['2Q24']; // Quarterly DuPont/ratios - merger quarter
+const MRG_Q_GROWTH = ['2Q24','3Q24','4Q24','1Q25']; // Quarterly growth/CASA - YoY distorted
+const MRG_Q_SEG = ['F2Q24','F3Q24','F4Q24','F1Q25']; // LoanMix periods (different naming)
+const C = {blue:'#004b8d',lb:'#94b8d9',red:'#dc2626',green:'#16a34a',orange:'#ea580c',purple:'#7c3aed',teal:'#0d9488',pink:'#db2777',amber:'#d97706',slate:'#475569',indigo:'#4f46e5',emerald:'#059669',rose:'#e11d48',cyan:'#0891b2',lime:'#65a30d',sky:'#0284c7'};
+const SC = [C.blue,C.orange,C.teal,C.purple,C.pink,C.amber,C.emerald,C.rose,C.cyan,C.lime,C.sky,C.indigo,C.slate];
+
+Chart.defaults.font.family = "'Segoe UI',sans-serif";
+Chart.defaults.font.size = 11;
+Chart.defaults.color = '#64748b';
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.pointStyleWidth = 8;
+Chart.defaults.plugins.legend.labels.boxHeight = 6;
+Chart.defaults.elements.point.radius = 2;
+Chart.defaults.elements.line.tension = 0.3;
+Chart.defaults.elements.line.borderWidth = 2;
+Chart.register(ChartDataLabels);
+Chart.defaults.plugins.datalabels = {display:false};
+
+const CI = {}; // chart instances
+
+function isEst(l, cut) {
+  if (cut === ACT_A) return parseInt(l.replace('FY','')) > 25;
+  const yr=parseInt(l.slice(-2)), qn=parseInt(l[0]);
+  return yr>26||(yr===26&&qn>3);
+}
+function bg(labels,cut,bc,ec) { return labels.map(l=>isEst(l,cut)?ec:bc); }
+function gv(m,keys) { return keys.map(k=>m[k]!=null?m[k]*100:null); }
+function gr(m,keys) { return keys.map(k=>m[k]!=null?m[k]:null); }
+
+// ---- TABLE BUILDER ----
+function buildTable(id, rows, labels, cut, mergerLabels) {
+  const mSet = new Set(mergerLabels || []);
+  let h='<table class="dupont-table"><thead><tr><th></th>';
+  labels.forEach(l => {
+    const cls = [isEst(l,cut)?'est':'', mSet.has(l)?'merger':''].filter(Boolean).join(' ');
+    h+=`<th class="${cls}">${l}</th>`;
+  });
+  h+='</tr></thead><tbody>';
+  rows.forEach(r => {
+    const isIndent = r.label.startsWith('  ');
+    const lbl = isIndent ? r.label.trim() : r.label;
+    h+=`<tr class="${r.cls||''}"><td class="${isIndent?'indent':''}">${lbl}</td>`;
+    labels.forEach(l => {
+      let v = r.data[l]; if(v!=null && r.abs) v=Math.abs(v);
+      const cls = [isEst(l,cut)?'est':'', mSet.has(l)?'merger':''].filter(Boolean).join(' ');
+      let s='-';
+      if(v!=null) {
+        if(r.fmtX) s=v.toFixed(1)+'x';
+        else if(r.fmtAbs) s=Math.round(v).toLocaleString();
+        else if(r.fmtBps) s=(v*10000).toFixed(0);
+        else if(r.fmtNum) s=v.toFixed(1);
+        else s=(v*100).toFixed(r.dec!=null?r.dec:2)+'%';
+      }
+      h+=`<td class="${cls}">${s}</td>`;
+    });
+    h+='</tr>';
+  });
+  h+='</tbody></table>';
+  document.getElementById(id).innerHTML = h;
+}
+
+// ---- CHART BUILDER ----
+function mkChart(id, labels, datasets, opts={}) {
+  const ctx=document.getElementById(id); if(!ctx) return;
+  if(CI[id]) CI[id].destroy();
+  CI[id]=new Chart(ctx,{type:'bar',data:{labels,datasets},options:{
+    responsive:true,maintainAspectRatio:true,aspectRatio:opts.ar||2.2,
+    interaction:{mode:'index',intersect:false},
+    plugins:{legend:{position:'top',labels:{padding:8}},tooltip:{callbacks:{label:c=>{const v=c.parsed.y;if(v==null)return'';return c.dataset.label+': '+v.toFixed(1)+(opts.suf||'%');}}},datalabels:{display:false}},
+    scales:{
+      x:{grid:{display:false},ticks:{maxRotation:45,font:{size:9}}},
+      y:{grid:{color:'#f1f5f9'},ticks:{callback:v=>v.toFixed(1)+(opts.suf||'%')}, ...(opts.yMin!=null?{min:opts.yMin}:{}), ...(opts.yMax!=null?{max:opts.yMax}:{})},
+      ...(opts.y1?{y1:{position:'right',grid:{display:false},ticks:{callback:v=>v.toFixed(1)+(opts.y1s||'%')}}}:{})
+    }
+  }});
+}
+function mkStacked(id, labels, datasets, opts={}) {
+  const ctx=document.getElementById(id); if(!ctx) return;
+  if(CI[id]) CI[id].destroy();
+  CI[id]=new Chart(ctx,{type:'bar',data:{labels,datasets},options:{
+    responsive:true,maintainAspectRatio:true,aspectRatio:opts.ar||2,
+    plugins:{legend:{position:'top',labels:{padding:6,font:{size:10}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+(opts.abs?Math.round(c.parsed.y).toLocaleString():c.parsed.y.toFixed(1)+'%')}},datalabels:{display:false}},
+    scales:{x:{stacked:true,grid:{display:false},ticks:{maxRotation:45,font:{size:9}}},y:{stacked:true,grid:{color:'#f1f5f9'},ticks:{callback:v=>opts.abs?(v/1000000).toFixed(1)+'Mn':v.toFixed(0)+'%'}}}
+  }});
+}
+
+// ---- VIEW SWITCH ----
+function switchView(v,e) {
+  document.querySelectorAll('.view-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if(e)e.target.classList.add('active');
+  window.scrollTo(0,0);
+  if(v==='quarterly'&&!CI['ch-loangr-q']) renderQ();
+  if(v==='segments'&&!CI['ch-loanmix-stack']) renderSeg();
+  if(v==='data'&&!document.querySelector('#tbl-data-annual table')) renderData();
+}
+
+// ============ ANNUAL ============
+function renderA() {
+  const A=DATA.annual.metrics, L=Object.keys(A.RoAE), SG=DATA.annual.segGrowth, SC2=DATA.annual.segComp;
+
+  // 1. DuPont
+  buildTable('tbl-dupont-a',[
+    {label:'Interest Income',data:A.IntIncome_pct},
+    {label:'Interest Expense',data:A.IntExp_pct,abs:true},
+    {label:'Net Interest Income',data:A.NII_pct,cls:'row-subtotal row-separator'},
+    {label:'Other Income',data:A.OtherInc_pct},
+    {label:'Total Revenue',data:A.TotalRev_pct,cls:'row-subtotal row-separator'},
+    {label:'Operating Expenses',data:A.Opex_pct,abs:true},
+    {label:'Pre-Provision Profit',data:A.PPOP_pct,cls:'row-subtotal row-separator'},
+    {label:'Provisions',data:A.Prov_pct,abs:true},
+    {label:'PBT',data:A.PBT_pct,cls:'row-subtotal'},
+    {label:'Tax',data:A.Tax_pct,abs:true},
+    {label:'RoAA',data:A.RoAA,cls:'row-highlight row-separator'},
+    {label:'Leverage (x)',data:A.leverage,fmtX:true},
+    {label:'RoAE',data:A.RoAE,cls:'row-highlight'},
+  ], L, ACT_A, MRG_A);
+
+  // 2. Key Ratios (Yield, CoF, NIM, C/I, CC, LDR)
+  buildTable('tbl-nim-a',[
+    {label:'Yield on Funds',data:A.Yield,cls:''},
+    {label:'Cost of Funds',data:A.COF},
+    {label:'Spreads',data:A.Spreads},
+    {label:'NIM',data:A.NIM,cls:'row-highlight row-separator'},
+    {label:'Cost / Income',data:A.CostIncome,dec:1},
+    {label:'Credit Cost (SP)',data:A.CreditCost_SP,cls:'row-separator'},
+    {label:'GNPA',data:A.GNPA},
+    {label:'NNPA',data:A.NNPA,cls:'row-separator'},
+    {label:'LDR',data:A.LDR,dec:1,cls:'row-highlight'},
+  ], L, ACT_A, MRG_A);
+
+  // 3. Growth & CASA - combined table
+  buildTable('tbl-growth-casa-a',[
+    {label:'Loan Growth YoY',data:A.Loan_growth,dec:1,cls:'row-highlight'},
+    {label:'Deposit Growth YoY',data:A.Deposit_growth,dec:1,cls:'row-separator'},
+    {label:'CASA Growth YoY',data:A.CASA_Growth,dec:1,cls:'row-highlight'},
+    {label:'  CA Growth YoY',data:A.CA_Growth,dec:1},
+    {label:'  SA Growth YoY',data:A.SA_Growth,dec:1,cls:'row-separator'},
+    {label:'CASA Ratio',data:A.CASA_Ratio,dec:1,cls:'row-highlight'},
+    {label:'  CA Ratio',data:A.CA_Ratio,dec:1},
+    {label:'  SA Ratio',data:A.SA_Ratio,dec:1},
+  ], L, ACT_A, MRG_A);
+
+  // Charts for section 3
+  mkChart('ch-loangr-a',L,[
+    {label:'Loan Growth',type:'bar',data:gv(A.Loan_growth,L),backgroundColor:bg(L,ACT_A,C.blue,C.lb),borderRadius:3,order:2},
+    {label:'Deposit Growth',type:'line',data:gv(A.Deposit_growth,L),borderColor:C.teal},
+  ]);
+  mkChart('ch-depgr-a',L,[
+    {label:'CASA',type:'bar',data:gv(A.CASA_Growth,L),backgroundColor:bg(L,ACT_A,C.blue,C.lb),borderRadius:3,order:2},
+    {label:'CA',type:'line',data:gv(A.CA_Growth,L),borderColor:C.teal},
+    {label:'SA',type:'line',data:gv(A.SA_Growth,L),borderColor:C.orange},
+  ]);
+  mkChart('ch-casa-ldr-a',L,[
+    {label:'CASA',type:'line',data:gv(A.CASA_Ratio,L),borderColor:C.blue,borderWidth:3},
+    {label:'CA',type:'line',data:gv(A.CA_Ratio,L),borderColor:C.teal},
+    {label:'SA',type:'line',data:gv(A.SA_Ratio,L),borderColor:C.orange},
+    {label:'LDR',type:'bar',data:gv(A.LDR,L),backgroundColor:bg(L,ACT_A,'rgba(0,75,141,0.15)','rgba(148,184,217,0.15)'),borderRadius:3,order:2},
+  ]);
+}
+
+// ============ QUARTERLY ============
+function renderQ() {
+  const Q=DATA.quarterly.metrics, L=Object.keys(Q.RoAE), QLG=DATA.quarterly.loanGrowthQoQ;
+
+  // 1. DuPont
+  buildTable('tbl-dupont-q',[
+    {label:'Interest Income',data:Q.IntIncome_pct},
+    {label:'Interest Expense',data:Q.IntExp_pct,abs:true},
+    {label:'NII',data:Q.NII_pct,cls:'row-subtotal row-separator'},
+    {label:'Other Income',data:Q.OtherInc_pct},
+    {label:'Total Revenue',data:Q.TotalRev_pct,cls:'row-subtotal row-separator'},
+    {label:'Opex',data:Q.Opex_pct,abs:true},
+    {label:'PPOP',data:Q.PPOP_pct,cls:'row-subtotal row-separator'},
+    {label:'Provisions',data:Q.Prov_pct,abs:true},
+    {label:'PBT',data:Q.PBT_pct,cls:'row-subtotal'},
+    {label:'Tax',data:Q.Tax_pct,abs:true},
+    {label:'RoAA',data:Q.RoAA,cls:'row-highlight row-separator'},
+    {label:'Leverage (x)',data:Q.leverage,fmtX:true},
+    {label:'RoAE',data:Q.RoAE,cls:'row-highlight'},
+  ], L, ACT_Q, MRG_Q_DUPONT);
+
+  // 2. Key Ratios (Yield, CoF, NIM, C/I, CC, LDR)
+  buildTable('tbl-nim-q',[
+    {label:'Yield',data:Q.Yield},
+    {label:'CoF',data:Q.COF},
+    {label:'Spreads',data:Q.Spreads},
+    {label:'NIM',data:Q.NIM,cls:'row-highlight row-separator'},
+    {label:'Cost/Income',data:Q.CostIncome,dec:1},
+    {label:'Credit Cost',data:Q.CreditCost,cls:'row-separator'},
+    {label:'GNPA',data:Q.GNPA},
+    {label:'NNPA',data:Q.NNPA,cls:'row-separator'},
+    {label:'LDR',data:Q.LDR,dec:1,cls:'row-highlight'},
+  ], L, ACT_Q, MRG_Q_DUPONT);
+
+  // 3. Growth & CASA - combined table (YoY)
+  // Compute YoY for loans and deposits (4-quarter lookback)
+  const loanYoY = {}, depYoY = {};
+  for (let i = 4; i < L.length; i++) {
+    const lc = (Q.Loan_growth_QoQ||{}), dc = (Q.Deposit_growth_QoQ||{});
+    // Use absolute data for YoY
+    const qa = DATA.quarterly.absolute || {};
+    const lCurr = (qa.NetAdvances||{})[L[i]], lPrev = (qa.NetAdvances||{})[L[i-4]];
+    if (lCurr && lPrev && lPrev > 0) loanYoY[L[i]] = (lCurr - lPrev) / lPrev;
+    const dCurr = (qa.Deposits||{})[L[i]], dPrev = (qa.Deposits||{})[L[i-4]];
+    if (dCurr && dPrev && dPrev > 0) depYoY[L[i]] = (dCurr - dPrev) / dPrev;
+  }
+
+  buildTable('tbl-growth-casa-q',[
+    {label:'Loan Growth YoY',data:loanYoY,dec:1,cls:'row-highlight'},
+    {label:'Deposit Growth YoY',data:depYoY,dec:1,cls:'row-separator'},
+    {label:'CASA Growth YoY',data:Q.CASA_Growth_YoY||{},dec:1,cls:'row-highlight'},
+    {label:'  CA Growth YoY',data:Q.CA_Growth_YoY||{},dec:1},
+    {label:'  SA Growth YoY',data:Q.SA_Growth_YoY||{},dec:1,cls:'row-separator'},
+    {label:'CASA Ratio',data:Q.CASA_Ratio,dec:1,cls:'row-highlight'},
+    {label:'  CA Ratio',data:Q.CA_Ratio,dec:1},
+    {label:'  SA Ratio',data:Q.SA_Ratio,dec:1},
+  ], L, ACT_Q, MRG_Q_GROWTH);
+
+  // Charts for section 3
+  mkChart('ch-loangr-q',L,[
+    {label:'Loan YoY',type:'bar',data:gv(loanYoY,L),backgroundColor:C.blue,borderRadius:2,order:2},
+    {label:'Deposit YoY',type:'line',data:gv(depYoY,L),borderColor:C.teal},
+  ]);
+  mkChart('ch-depgr-q',L,[
+    {label:'CASA YoY',type:'bar',data:gv(Q.CASA_Growth_YoY||{},L),backgroundColor:C.blue,borderRadius:2,order:2},
+    {label:'CA YoY',type:'line',data:gv(Q.CA_Growth_YoY||{},L),borderColor:C.teal},
+    {label:'SA YoY',type:'line',data:gv(Q.SA_Growth_YoY||{},L),borderColor:C.orange},
+  ]);
+  mkChart('ch-casa-ldr-q',L,[
+    {label:'CASA',type:'line',data:gv(Q.CASA_Ratio,L),borderColor:C.blue,borderWidth:3},
+    {label:'CA',type:'line',data:gv(Q.CA_Ratio,L),borderColor:C.teal},
+    {label:'SA',type:'line',data:gv(Q.SA_Ratio,L),borderColor:C.orange},
+    {label:'LDR',type:'bar',data:gv(Q.LDR,L),backgroundColor:'rgba(0,75,141,0.12)',borderRadius:2,order:2},
+  ]);
+
+  // 4. QoQ Growth table (no chart - too volatile)
+  buildTable('tbl-qoq-q',[
+    {label:'Loan Growth QoQ',data:Q.Loan_growth_QoQ||{},dec:1,cls:'row-highlight'},
+    {label:'Deposit Growth QoQ',data:Q.Deposit_growth_QoQ||{},dec:1,cls:'row-separator'},
+    {label:'CASA Growth QoQ',data:(function(){
+      const r={}; const qa=DATA.quarterly.absolute||{}; const L2=Object.keys(qa.CASA||{});
+      for(let i=1;i<L2.length;i++){const c=(qa.CASA||{})[L2[i]],p=(qa.CASA||{})[L2[i-1]];if(c&&p&&p>0)r[L2[i]]=(c-p)/p;}return r;
+    })(),dec:1},
+    {label:'  CA Growth QoQ',data:(function(){
+      const r={}; const qa=DATA.quarterly.absolute||{}; const L2=Object.keys(qa.CA||{});
+      for(let i=1;i<L2.length;i++){const c=(qa.CA||{})[L2[i]],p=(qa.CA||{})[L2[i-1]];if(c&&p&&p>0)r[L2[i]]=(c-p)/p;}return r;
+    })(),dec:1},
+    {label:'  SA Growth QoQ',data:(function(){
+      const r={}; const qa=DATA.quarterly.absolute||{}; const L2=Object.keys(qa.SA||{});
+      for(let i=1;i<L2.length;i++){const c=(qa.SA||{})[L2[i]],p=(qa.SA||{})[L2[i-1]];if(c&&p&&p>0)r[L2[i]]=(c-p)/p;}return r;
+    })(),dec:1},
+  ], L, ACT_Q, MRG_Q_GROWTH);
+}
+
+// ============ SEGMENTS ============
+function renderSeg() {
+  const LM=DATA.loanMix, Lp=Object.keys(LM.abs.TotalAUM||LM.abs.TotalRetail||{});
+  const cut = ACT_Q;
+
+  // 1. Loan Book Breakup - hierarchical table
+  const absRows = [
+    {label:'Retail Loans', data:LM.abs.TotalRetail||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'  Retail Mortgage', data:LM.abs.RetailMortgage||{}, fmtAbs:true},
+    {label:'  Personal Loan', data:LM.abs.PersonalLoan||{}, fmtAbs:true},
+    {label:'  Auto', data:LM.abs.Auto||{}, fmtAbs:true},
+    {label:'  Payment', data:LM.abs.Payment||{}, fmtAbs:true},
+    {label:'  2W', data:LM.abs.TwoWheeler||{}, fmtAbs:true},
+    {label:'  Gold', data:LM.abs.Gold||{}, fmtAbs:true},
+    {label:'  Other Retail', data:LM.abs.OtherRetail||{}, fmtAbs:true, cls:'row-separator'},
+    {label:'CRB', data:LM.abs.CRB||{}, fmtAbs:true, cls:'row-subtotal'},
+    {label:'  Emerging Corporates', data:LM.abs.EmergingCorp||{}, fmtAbs:true},
+    {label:'  Business Banking', data:LM.abs.BusinessBanking||{}, fmtAbs:true},
+    {label:'  Comm. Transportation', data:LM.abs.CommTransport||{}, fmtAbs:true},
+    {label:'  Other CRB', data:LM.abs.OtherCRB||{}, fmtAbs:true},
+    {label:'  Agri', data:LM.abs.Agri||{}, fmtAbs:true, cls:'row-separator'},
+    {label:'Corporate & Other Wholesale', data:LM.abs.Corporate||{}, fmtAbs:true, cls:'row-subtotal row-separator'},
+    {label:'Total AUM', data:LM.abs.TotalAUM||{}, fmtAbs:true, cls:'row-highlight'},
+    {label:'eHDFCL Non-Individual', data:LM.abs.eHDFCL||{}, fmtAbs:true},
+    {label:'IBPC/BRDS/Securitisation', data:LM.abs.IBPC_BRDS||{}, fmtAbs:true, cls:'row-separator'},
+    {label:'Gross Advances', data:LM.abs.GrossAdvances||{}, fmtAbs:true, cls:'row-highlight'},
+  ];
+  buildTable('tbl-loanmix-abs', absRows, Lp, cut, MRG_Q_SEG);
+
+  // 2. Composition (% of Total AUM) - summary level + key sub-segments
+  const pctRows = [
+    {label:'Total Retail', data:LM.pct.TotalRetail||{}, dec:1, cls:'row-subtotal'},
+    {label:'  Retail Mortgage', data:LM.pct.RetailMortgage||{}, dec:1},
+    {label:'  Personal Loan', data:LM.pct.PersonalLoan||{}, dec:1},
+    {label:'  Auto', data:LM.pct.Auto||{}, dec:1},
+    {label:'  Payment', data:LM.pct.Payment||{}, dec:1},
+    {label:'  Other Retail', data:LM.pct.OtherRetail||{}, dec:1, cls:'row-separator'},
+    {label:'CRB', data:LM.pct.CRB||{}, dec:1, cls:'row-subtotal'},
+    {label:'  Business Banking', data:LM.pct.BusinessBanking||{}, dec:1},
+    {label:'  Comm. Transportation', data:LM.pct.CommTransport||{}, dec:1},
+    {label:'  Agri', data:LM.pct.Agri||{}, dec:1, cls:'row-separator'},
+    {label:'Corporate & Wholesale', data:LM.pct.Corporate||{}, dec:1, cls:'row-subtotal'},
+  ];
+  buildTable('tbl-loanmix-pct', pctRows, Lp, cut, MRG_Q_SEG);
+
+  // Stacked chart - top level
+  const topSegs = ['TotalRetail','CRB','Corporate'];
+  const topNames = ['Total Retail','CRB','Corporate'];
+  mkStacked('ch-loanmix-pct', Lp, topSegs.map((k,i)=>({
+    label:topNames[i], data:Lp.map(l=>LM.pct[k]&&LM.pct[k][l]!=null?LM.pct[k][l]*100:0), backgroundColor:SC[i], borderWidth:0
+  })),{ar:2.5});
+
+  // 3. YoY Growth
+  const yoyRows = [
+    {label:'Total Retail', data:LM.yoy.TotalRetail||{}, dec:1, cls:'row-subtotal'},
+    {label:'  Retail Mortgage', data:LM.yoy.RetailMortgage||{}, dec:1},
+    {label:'  Personal Loan', data:LM.yoy.PersonalLoan||{}, dec:1},
+    {label:'  Auto', data:LM.yoy.Auto||{}, dec:1},
+    {label:'  Payment', data:LM.yoy.Payment||{}, dec:1, cls:'row-separator'},
+    {label:'CRB', data:LM.yoy.CRB||{}, dec:1, cls:'row-subtotal'},
+    {label:'  Business Banking', data:LM.yoy.BusinessBanking||{}, dec:1, cls:'row-separator'},
+    {label:'Corporate & Wholesale', data:LM.yoy.Corporate||{}, dec:1, cls:'row-subtotal row-separator'},
+    {label:'Total AUM', data:LM.yoy.TotalAUM||{}, dec:1, cls:'row-highlight'},
+  ];
+  buildTable('tbl-loanmix-yoy', yoyRows, Lp, cut, MRG_Q_SEG);
+
+  // YoY chart - top level segments
+  const yoyChartSegs = ['TotalRetail','CRB','Corporate','TotalAUM'];
+  const yoyChartNames = ['Total Retail','CRB','Corporate','Total AUM'];
+  mkChart('ch-loanmix-yoy', Lp, yoyChartSegs.map((k,i)=>({
+    label:yoyChartNames[i], type:'line',
+    data:Lp.map(l=>{const v=LM.yoy[k]&&LM.yoy[k][l]; return v!=null?(v*100>200?null:v*100):null;}),
+    borderColor:SC[i], borderWidth:k==='TotalAUM'?3:1.5,
+    borderDash:k==='TotalAUM'?[5,3]:[], pointRadius:1, spanGaps:true,
+  })),{ar:2.5, yMax:100});
+
+  // 4. Retail sub-segment composition (% of Total Retail)
+  // Compute from absolute values
+  const retailSubs = ['RetailMortgage','PersonalLoan','Auto','Payment','TwoWheeler','Gold','OtherRetail'];
+  const retailNames = ['Retail Mortgage','Personal Loan','Auto','Payment','2W','Gold','Other Retail'];
+  const retailPct = {};
+  retailSubs.forEach(k => {
+    retailPct[k] = {};
+    Lp.forEach(l => {
+      const seg = LM.abs[k] && LM.abs[k][l];
+      const tot = LM.abs.TotalRetail && LM.abs.TotalRetail[l];
+      if (seg != null && tot != null && tot > 0) retailPct[k][l] = seg / tot;
+    });
+  });
+
+  buildTable('tbl-retail-comp', retailSubs.map((k,i)=>({
+    label:retailNames[i], data:retailPct[k], dec:1
+  })), Lp, cut, MRG_Q_SEG);
+
+  mkStacked('ch-retail-comp', Lp, retailSubs.map((k,i)=>({
+    label:retailNames[i], data:Lp.map(l=>retailPct[k][l]!=null?retailPct[k][l]*100:0),
+    backgroundColor:SC[i], borderWidth:0
+  })),{ar:2.5});
+}
+
+// ============ DATA TAB ============
+// Compute YoY growth from absolute data
+function computeYoY(data, labels) {
+  const result = {};
+  for (let i = 1; i < labels.length; i++) {
+    const curr = data[labels[i]], prev = data[labels[i-1]];
+    if (curr != null && prev != null && prev !== 0) result[labels[i]] = (curr - prev) / prev;
+  }
+  return result;
+}
+
+function renderData() {
+  const AA = DATA.annual.absolute || {};
+  const QA = DATA.quarterly.absolute || {};
+  const aLabels = Object.keys(AA.NetAdvances || AA.Deposits || {});
+  const qLabels = Object.keys(QA.NetAdvances || QA.Deposits || {});
+
+  // Build annual rows with YoY growth for PAT, EPS, BVPS
+  const aRows = [];
+  const absItems = [
+    {label:'Net Advances', key:'NetAdvances', cls:'row-subtotal'},
+    {label:'Total Deposits', key:'Deposits', cls:'row-subtotal'},
+    {label:'  CA (Demand)', key:'Demand'},
+    {label:'  SA (Savings)', key:'Savings'},
+    {label:'  CASA', key:'CASA'},
+    {label:'  Term Deposits', key:'Term', cls:'row-separator'},
+    {label:'Total Assets', key:'TotalAssets', cls:'row-subtotal'},
+    {label:'Borrowings', key:'Borrowings'},
+    {label:'Equity', key:'Equity', cls:'row-separator'},
+  ];
+  absItems.forEach(r => aRows.push({label:r.label, data:AA[r.key]||{}, fmtAbs:true, cls:r.cls||''}));
+
+  // PAT + YoY
+  aRows.push({label:'PAT', data:AA.PAT||{}, fmtAbs:true, cls:'row-subtotal'});
+  aRows.push({label:'  PAT Growth YoY', data:computeYoY(AA.PAT||{}, aLabels), dec:1, cls:'row-separator'});
+
+  // EPS + YoY
+  aRows.push({label:'EPS (INR)', data:AA.EPS||{}, fmtNum:true, cls:'row-subtotal'});
+  aRows.push({label:'  EPS Growth YoY', data:computeYoY(AA.EPS||{}, aLabels), dec:1, cls:'row-separator'});
+
+  // BVPS + YoY
+  aRows.push({label:'BVPS (INR)', data:AA.BVPS||{}, fmtNum:true, cls:'row-subtotal'});
+  aRows.push({label:'  BVPS Growth YoY', data:computeYoY(AA.BVPS||{}, aLabels), dec:1});
+
+  buildTable('tbl-data-annual', aRows, aLabels, ACT_A, MRG_A);
+
+  // CAGR Summary table
+  function cagrCalc(d, from, to) {
+    const v1=d[from], v2=d[to];
+    if (!v1||!v2||v1<=0||v2<=0) return null;
+    const y1=parseInt(from.replace('FY','')), y2=parseInt(to.replace('FY',''));
+    if (y2<=y1) return null;
+    return Math.pow(v2/v1, 1/(y2-y1)) - 1;
+  }
+  const cagrItems = [
+    {label:'Net Advances', key:'NetAdvances'}, {label:'Deposits', key:'Deposits'},
+    {label:'CASA', key:'CASA'}, {label:'Total Assets', key:'TotalAssets'},
+    {label:'Equity', key:'Equity'}, {label:'PAT', key:'PAT'},
+    {label:'EPS', key:'EPS'}, {label:'BVPS', key:'BVPS'},
+  ];
+  const cagrCols = ['Last 10yr','Last 5yr','Next 5yr'];
+  let ch = '<table class="dupont-table"><thead><tr><th></th>';
+  cagrCols.forEach(c => ch += `<th>${c}</th>`);
+  ch += '</tr></thead><tbody>';
+  cagrItems.forEach(item => {
+    const d = AA[item.key] || {};
+    const c10 = cagrCalc(d,'FY15','FY25');
+    const c5 = cagrCalc(d,'FY20','FY25');
+    const c5f = cagrCalc(d,'FY25','FY30');
+    ch += `<tr><td>${item.label}</td>`;
+    [c10,c5,c5f].forEach((v,i) => {
+      const ec = i===2?' est':'';
+      ch += `<td class="${ec}">${v!=null?(v*100).toFixed(1)+'%':'-'}</td>`;
+    });
+    ch += '</tr>';
+  });
+  ch += '</tbody></table>';
+  document.getElementById('tbl-cagr-summary').innerHTML = ch;
+
+  // Quarterly rows with PAT YoY
+  const qRows = [];
+  [{label:'Net Advances',key:'NetAdvances',cls:'row-subtotal'},{label:'Total Deposits',key:'Deposits',cls:'row-subtotal'},
+   {label:'  CA',key:'CA'},{label:'  SA',key:'SA'},{label:'  CASA',key:'CASA'},{label:'  Term',key:'Term',cls:'row-separator'},
+   {label:'Total Assets',key:'TotalAssets',cls:'row-subtotal'},{label:'Borrowings',key:'Borrowings'},
+   {label:'Equity',key:'Equity',cls:'row-separator'},
+  ].forEach(r => qRows.push({label:r.label, data:QA[r.key]||{}, fmtAbs:true, cls:r.cls||''}));
+  qRows.push({label:'PAT', data:QA.PAT||{}, fmtAbs:true, cls:'row-subtotal'});
+  // Quarterly PAT YoY (4-quarter lookback)
+  const patYoYQ = {};
+  for (let i = 4; i < qLabels.length; i++) {
+    const curr = (QA.PAT||{})[qLabels[i]], prev = (QA.PAT||{})[qLabels[i-4]];
+    if (curr!=null && prev!=null && prev!==0) patYoYQ[qLabels[i]] = (curr-prev)/prev;
+  }
+  qRows.push({label:'  PAT Growth YoY', data:patYoYQ, dec:1});
+  buildTable('tbl-data-quarterly', qRows, qLabels, ACT_Q, MRG_Q_GROWTH);
+
+  // Populate CAGR dropdowns
+  updateCAGRPeriods();
+}
+
+function updateCAGRPeriods() {
+  const src = document.getElementById('cagr-source').value;
+  const manual = document.getElementById('cagr-manual');
+  const metricWrap = document.getElementById('cagr-metric-wrap');
+  const fromSel = document.getElementById('cagr-from');
+  const toSel = document.getElementById('cagr-to');
+
+  if (src === 'manual') {
+    manual.style.display = 'block';
+    metricWrap.style.display = 'none';
+    fromSel.parentElement.style.display = 'none';
+    toSel.parentElement.style.display = 'none';
+    document.querySelector('[onclick="calcCAGR()"]').style.display = 'none';
+    return;
+  }
+  manual.style.display = 'none';
+  metricWrap.style.display = '';
+  fromSel.parentElement.style.display = '';
+  toSel.parentElement.style.display = '';
+  document.querySelector('[onclick="calcCAGR()"]').style.display = '';
+
+  const AA = DATA.annual.absolute || {};
+  const QA = DATA.quarterly.absolute || {};
+  const labels = src === 'quarterly' ? Object.keys(QA.NetAdvances || QA.Deposits || {}) : Object.keys(AA.NetAdvances || AA.Deposits || {});
+
+  fromSel.innerHTML = labels.map(l => `<option value="${l}">${l}</option>`).join('');
+  toSel.innerHTML = labels.map(l => `<option value="${l}">${l}</option>`).join('');
+  if (src === 'annual') {
+    if (labels.includes('FY20')) fromSel.value = 'FY20';
+    if (labels.includes('FY25')) toSel.value = 'FY25';
+  } else {
+    if (labels.length > 8) fromSel.value = labels[labels.length - 9];
+    toSel.value = labels[labels.length - 1];
+  }
+}
+
+function calcCAGR() {
+  const src = document.getElementById('cagr-source').value;
+  const metric = document.getElementById('cagr-metric').value;
+  const from = document.getElementById('cagr-from').value;
+  const to = document.getElementById('cagr-to').value;
+  const pool = src === 'quarterly' ? (DATA.quarterly.absolute || {}) : (DATA.annual.absolute || {});
+  const d = pool[metric] || {};
+  const v1 = d[from], v2 = d[to];
+  if (!v1 || !v2 || v1 <= 0 || v2 <= 0) { document.getElementById('cagr-result').textContent = 'N/A'; return; }
+
+  let years;
+  if (src === 'quarterly') {
+    // Parse quarter labels: NQ## -> count quarters between, divide by 4
+    const allQ = Object.keys(d);
+    const i1 = allQ.indexOf(from), i2 = allQ.indexOf(to);
+    years = (i2 - i1) / 4;
+  } else {
+    years = parseInt(to.replace('FY','')) - parseInt(from.replace('FY',''));
+  }
+  if (years <= 0) { document.getElementById('cagr-result').textContent = 'N/A'; return; }
+
+  const cagr = Math.pow(v2 / v1, 1 / years) - 1;
+  const fmtV = v => metric==='EPS'||metric==='BVPS' ? v.toFixed(1) : Math.round(v).toLocaleString();
+  document.getElementById('cagr-result').innerHTML =
+    `<span style="font-size:11px;color:var(--text-muted)">CAGR:</span> ${(cagr*100).toFixed(1)}%` +
+    `<span style="font-size:10px;color:var(--text-muted);margin-left:6px;">(${fmtV(v1)} → ${fmtV(v2)}, ${years.toFixed(1)}yr)</span>`;
+}
+
+function calcCAGRManual() {
+  const v1 = parseFloat(document.getElementById('cagr-v1').value);
+  const v2 = parseFloat(document.getElementById('cagr-v2').value);
+  const yrs = parseFloat(document.getElementById('cagr-yrs').value);
+  if (!v1 || !v2 || !yrs || v1 <= 0 || v2 <= 0 || yrs <= 0) {
+    document.getElementById('cagr-result-manual').textContent = 'N/A'; return;
+  }
+  const cagr = Math.pow(v2 / v1, 1 / yrs) - 1;
+  document.getElementById('cagr-result-manual').innerHTML =
+    `<span style="font-size:11px;color:var(--text-muted)">CAGR:</span> ${(cagr*100).toFixed(1)}%`;
+}
+
+function onScenarioChange(val) {
+  const sel = val || document.getElementById('scenario-select')?.value || 'base';
+  const sc = DATA.scenarioData?.[sel];
+  if (!sc) return;
+
+  // Overwrite forecast periods in annual metrics and absolute
+  const fys = Object.keys(sc.metrics?.RoAE || {});
+  if (!fys.length) return;
+
+  // Swap metrics
+  for (const [key, fcastData] of Object.entries(sc.metrics || {})) {
+    if (DATA.annual.metrics[key]) {
+      for (const fy of fys) {
+        if (fcastData[fy] != null) DATA.annual.metrics[key][fy] = fcastData[fy];
+      }
+    }
+  }
+  // Swap absolute
+  for (const [key, fcastData] of Object.entries(sc.absolute || {})) {
+    if (DATA.annual.absolute && DATA.annual.absolute[key]) {
+      for (const fy of fys) {
+        if (fcastData[fy] != null) DATA.annual.absolute[key][fy] = fcastData[fy];
+      }
+    }
+  }
+  // Swap segment growth
+  for (const [key, fcastData] of Object.entries(sc.segGrowth || {})) {
+    if (DATA.annual.segGrowth && DATA.annual.segGrowth[key]) {
+      for (const fy of fys) {
+        if (fcastData[fy] != null) DATA.annual.segGrowth[key][fy] = fcastData[fy];
+      }
+    }
+  }
+
+  // Re-render annual view and data tab
+  renderA();
+  renderData();
+  // Sync both dropdowns and color cue
+  const clr = sel === 'upside' ? '#16a34a' : sel === 'downside' ? '#dc2626' : 'var(--border)';
+  ['scenario-select','scenario-select-annual'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.value = sel; el.style.borderColor = clr; }
+  });
+}
+
+// Init
+renderA();
+</script>
+</body>
+</html>
